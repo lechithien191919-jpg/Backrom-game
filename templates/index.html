@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms 3D Wide Maze</title>
+    <title>Backrooms 3D Open Hall</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -17,7 +17,7 @@
             z-index: 10;
         }
         
-        /* Cần điều khiển ảo Joystick */
+        /* Joystick ảo di chuyển */
         #joystick-base {
             position: absolute;
             bottom: 40px;
@@ -65,72 +65,82 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // 1. Khởi tạo Scene, Camera, Renderer
+        // 1. Khởi tạo không gian 3D
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd4af37);
+        scene.background = new THREE.Color(0xd4af37); // Màu vàng nền
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Ánh sáng
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+        // Ánh sáng phòng
+        const ambientLight = new THREE.AmbientLight(0xfffff0, 1.0);
         scene.add(ambientLight);
 
-        // 2. Bản đồ mê cung (0: đường đi rộng, 1: tường)
+        // 2. Thiết kế bản đồ phòng lớn mở (0: Khoảng trống mênh mông, 1: Tường bao quanh, 2: Cột trụ giữa phòng)
         const map = [
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,1],
-            [1,0,1,0,1,0,1,1,0,1],
-            [1,0,1,0,0,0,0,1,0,1],
-            [1,0,1,1,1,1,0,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1],
-            [1,1,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,1,0,1],
-            [1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,2,0,0,0,0,0,1],
+            [1,0,0,1,0,0,0,1,0,0,0,1],
+            [1,0,0,1,0,2,0,1,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,1],
+            [1,2,0,0,0,1,1,0,0,0,2,1],
+            [1,0,0,0,0,1,1,0,0,0,0,1],
+            [1,0,0,1,0,0,0,0,1,0,0,1],
+            [1,0,0,1,2,0,0,2,1,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc29b38 });
-        const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xf5f2dc });
-        const ceilingMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        
-        // Tăng kích thước mỗi ô lên 14 đơn vị để hành lang cực kỳ rộng rãi
-        const tileSize = 14; 
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a }); // Màu tường vàng Backrooms
+        const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xcdb14c }); // Màu cột trụ
+        const tileSize = 12; // Kích thước mỗi ô rộng rãi
 
+        // Vẽ sàn nhà, trần nhà và các cấu trúc phòng
         for (let z = 0; z < map.length; z++) {
             for (let x = 0; x < map[z].length; x++) {
                 const posX = (x - map[z].length / 2) * tileSize;
                 const posZ = (z - map.length / 2) * tileSize;
 
-                // Sàn nhà rộng
+                // Sàn nhà
                 const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
-                const floor = new THREE.Mesh(floorGeo, floorMaterial);
+                const floorMat = new THREE.MeshBasicMaterial({ color: 0xdbcc76 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
                 floor.rotation.x = -Math.PI / 2;
                 floor.position.set(posX, -6, posZ);
                 scene.add(floor);
 
-                // Trần nhà cao
-                const ceiling = new THREE.Mesh(floorGeo, ceilingMaterial);
+                // Trần nhà có ô lưới giống ảnh mẫu
+                const ceilingMat = new THREE.MeshBasicMaterial({ color: 0xe3d488 });
+                const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
                 ceiling.rotation.x = Math.PI / 2;
                 ceiling.position.set(posX, 6, posZ);
                 scene.add(ceiling);
 
-                // Tường
+                // Dựng tường bao quanh
                 if (map[z][x] === 1) {
                     const wallGeo = new THREE.BoxGeometry(tileSize, 12, tileSize);
                     const wall = new THREE.Mesh(wallGeo, wallMaterial);
                     wall.position.set(posX, 0, posZ);
                     scene.add(wall);
                 }
+
+                // Dựng các cột trụ đứng giữa phòng (giống ảnh mẫu)
+                if (map[z][x] === 2) {
+                    const pillarGeo = new THREE.BoxGeometry(tileSize * 0.5, 12, tileSize * 0.5);
+                    const pillar = new THREE.Mesh(pillarGeo, pillarMaterial);
+                    pillar.position.set(posX, 0, posZ);
+                    scene.add(pillar);
+                }
             }
         }
 
-        // Đặt vị trí bắt đầu phù hợp với bản đồ rộng mới
-        camera.position.set(-28, 0, -28);
+        // Vị trí xuất phát ở khoảng trống trong phòng
+        camera.position.set(0, 0, 0);
         let yaw = 0;
 
-        // 3. Xử lý vuốt màn hình xoay góc nhìn
+        // 3. Xử lý vuốt màn hình xoay góc nhìn ngang
         let isDragging = false;
         let prevX = 0;
 
@@ -197,7 +207,7 @@
         joystickBase.addEventListener('touchend', resetJoystick);
         joystickBase.addEventListener('touchcancel', resetJoystick);
 
-        // Bộ đếm thời gian
+        // Bộ đếm thời gian sinh tồn
         let survivalTime = 0;
         setInterval(() => {
             survivalTime++;
@@ -205,7 +215,7 @@
         }, 1000);
 
         // 5. Vòng lặp game
-        const speed = 0.1; // Tăng tốc độ di chuyển chút cho mượt với bản đồ lớn
+        const speed = 0.1;
         function animate() {
             requestAnimationFrame(animate);
 
