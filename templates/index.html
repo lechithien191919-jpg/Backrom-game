@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms 3D Maze</title>
+    <title>Backrooms 3D Mobile</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -16,34 +16,36 @@
             text-shadow: 2px 2px 4px #000;
             z-index: 10;
         }
-        /* Nút điều khiển ảo trên màn hình */
-        .control-btn {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            color: white;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            backdrop-filter: blur(4px);
-        }
-        .control-btn:active { background: rgba(255, 255, 255, 0.5); }
         
-        #btn-forward { bottom: 120px; left: 50%; transform: translateX(-50%); }
-        #btn-back { bottom: 30px; left: 50%; transform: translateX(-50%); }
-        #btn-left { bottom: 75px; left: calc(50% - 80px); }
-        #btn-right { bottom: 75px; left: calc(50% + 10px); }
+        /* Cần điều khiển ảo (Virtual Joystick) chuẩn game mobile */
+        #joystick-base {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            z-index: 10;
+            touch-action: none;
+        }
+        #joystick-knob {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
 
         #hint {
             position: absolute;
-            bottom: 210px;
-            width: 100%;
-            text-align: center;
+            bottom: 20px;
+            right: 20px;
             color: rgba(255,255,255,0.7);
             font-size: 13px;
             pointer-events: none;
@@ -56,27 +58,27 @@
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
     <div id="hint">Vuốt màn hình ngang để xoay góc nhìn</div>
 
-    <div id="btn-forward" class="control-btn">▲</div>
-    <div id="btn-left" class="control-btn">◀</div>
-    <div id="btn-right" class="control-btn">▶</div>
-    <div id="btn-back" class="control-btn">▼</div>
+    <!-- Joystick ảo -->
+    <div id="joystick-base">
+        <div id="joystick-knob"></div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // 1. Khởi tạo không gian 3D
+        // 1. Khởi tạo Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd4af37); // Màu vàng đặc trưng Backrooms
+        scene.background = new THREE.Color(0xd4af37); // Màu vàng nền cơ bản
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Ánh sáng phòng
+        // Ánh sáng
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
-        // 2. Thiết kế bản đồ mê cung nhiều ngã rẽ (0: hành lang trống, 1: tường)
+        // 2. Thiết kế bản đồ mê cung nhiều ngã rẽ
         const map = [
             [1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,1],
@@ -89,33 +91,51 @@
             [1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xb5902d });
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc29b38 }); // Tường vàng đậm
+        const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xf5f2dc }); // Sàn màu trắng ngà
+        const ceilingMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Trần màu trắng tinh
         const tileSize = 6;
 
-        // Vẽ mê cung từ bản đồ
+        // Vẽ tường, sàn, trần từ bản đồ
         for (let z = 0; z < map.length; z++) {
             for (let x = 0; x < map[z].length; x++) {
+                const posX = (x - map[z].length / 2) * tileSize;
+                const posZ = (z - map.length / 2) * tileSize;
+
+                // Tạo Sàn nhà
+                const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
+                const floor = new THREE.Mesh(floorGeo, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.set(posX, -5, posZ);
+                scene.add(floor);
+
+                // Tạo Trần nhà
+                const ceiling = new THREE.Mesh(floorGeo, ceilingMaterial);
+                ceiling.rotation.x = Math.PI / 2;
+                ceiling.position.set(posX, 5, posZ);
+                scene.add(ceiling);
+
+                // Nếu là ô có số 1 thì dựng Tường
                 if (map[z][x] === 1) {
                     const wallGeo = new THREE.BoxGeometry(tileSize, 10, tileSize);
                     const wall = new THREE.Mesh(wallGeo, wallMaterial);
-                    // Căn chỉnh vị trí tường theo lưới
-                    wall.position.set((x - map[z].length / 2) * tileSize, 0, (z - map.length / 2) * tileSize);
+                    wall.position.set(posX, 0, posZ);
                     scene.add(wall);
                 }
             }
         }
 
-        // Vị trí ban đầu của người chơi
+        // Vị trí bắt đầu của người chơi
         camera.position.set(-12, 0, -12);
-        camera.rotation.y = 0;
+        let yaw = 0; // Góc xoay ngang
 
-        let yaw = 0; // Chỉ cho phép xoay ngang trái/phải
-
-        // 3. Xử lý vuốt màn hình để xoay góc nhìn ngang
+        // 3. Xử lý vuốt màn hình ngang để xoay góc nhìn
         let isDragging = false;
         let prevX = 0;
 
         window.addEventListener('touchstart', (e) => {
+            // Nếu chạm vào vùng joystick thì bỏ qua không xoay màn hình
+            if (e.touches[0].clientX < 180 && e.touches[0].clientY > window.innerHeight - 180) return;
             isDragging = true;
             prevX = e.touches[0].clientX;
         });
@@ -124,28 +144,61 @@
             if (!isDragging) return;
             const currentX = e.touches[0].clientX;
             const deltaX = currentX - prevX;
-            yaw -= deltaX * 0.004; // Xoay ngang mượt mà
+            yaw -= deltaX * 0.004;
             prevX = currentX;
         });
 
         window.addEventListener('touchend', () => { isDragging = false; });
 
-        // 4. Xử lý sự kiện bấm các nút di chuyển
-        const moveState = { forward: false, back: false, left: false, right: false };
+        // 4. Xử lý Joystick ảo mượt mà
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickKnob = document.getElementById('joystick-knob');
+        let moveVector = { x: 0, z: 0 };
+        let joystickTouchId = null;
 
-        function bindButton(id, direction) {
-            const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[direction] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); moveState[direction] = false; });
-            // Hỗ trợ cả click chuột trên máy tính
-            btn.addEventListener('mousedown', () => { moveState[direction] = true; });
-            btn.addEventListener('mouseup', () => { moveState[direction] = false; });
-        }
+        joystickBase.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+        });
 
-        bindButton('btn-forward', 'forward');
-        bindButton('btn-back', 'back');
-        bindButton('btn-left', 'left');
-        bindButton('btn-right', 'right');
+        joystickBase.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === joystickTouchId) {
+                    const rect = joystickBase.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    let dx = touch.clientX - centerX;
+                    let dy = touch.clientY - centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const maxRadius = 45; // Giới hạn bán kính kéo núm
+
+                    if (distance > maxRadius) {
+                        dx = (dx / distance) * maxRadius;
+                        dy = (dy / distance) * maxRadius;
+                    }
+
+                    // Di chuyển nút tròn trắng bên trong
+                    joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+                    // Tính toán hướng di chuyển chuẩn hóa
+                    moveVector.x = dx / maxRadius;
+                    moveVector.z = dy / maxRadius;
+                }
+            }
+        });
+
+        const resetJoystick = () => {
+            joystickTouchId = null;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+            moveVector = { x: 0, z: 0 };
+        };
+
+        joystickBase.addEventListener('touchend', resetJoystick);
+        joystickBase.addEventListener('touchcancel', resetJoystick);
 
         // Bộ đếm thời gian
         let survivalTime = 0;
@@ -154,32 +207,26 @@
             document.getElementById('score').innerText = survivalTime;
         }, 1000);
 
-        // 5. Vòng lặp cập nhật chuyển động và camera
+        // 5. Vòng lặp cập nhật chuyển động
         const speed = 0.08;
         function animate() {
             requestAnimationFrame(animate);
 
-            // Cố định góc nhìn cao độ bằng 0 (chỉ đi ngang, không lên xuống)
+            // Cố định chiều cao camera, chỉ xoay ngang
             camera.rotation.set(0, yaw, 0);
 
-            // Tính toán hướng di chuyển
-            const moveDir = new THREE.Vector3();
-            if (moveState.forward) moveDir.z -= 1;
-            if (moveState.back) moveDir.z += 1;
-            if (moveState.left) moveDir.x -= 1;
-            if (moveState.right) moveDir.x += 1;
-
-            moveDir.normalize();
-            moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-
-            // Di chuyển camera theo hướng đã chọn
-            camera.position.addScaledVector(moveDir, speed);
+            // Xử lý di chuyển theo cần gạt Joystick
+            if (moveVector.x !== 0 || moveVector.z !== 0) {
+                const moveDir = new THREE.Vector3(moveVector.x, 0, moveVector.z);
+                moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                camera.position.addScaledVector(moveDir, speed);
+            }
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // Xử lý xoay ngang dọc màn hình điện thoại
+        // Tự động điều chỉnh khi xoay màn hình điện thoại
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
