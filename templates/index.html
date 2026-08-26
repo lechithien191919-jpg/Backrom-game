@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backrooms 3D Mobile</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #ffeb3b;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
+
+    <!-- Thư viện Three.js để vẽ 3D trên trình duyệt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Khởi tạo không gian 3D cơ bản
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xd4af37); // Màu vàng đặc trưng của Backrooms
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Ánh sáng phòng
+        const light = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(light);
+
+        // Tạo một căn phòng mê cung đơn giản (Hộp 3D)
+        const roomGeo = new THREE.BoxGeometry(20, 10, 20);
+        const roomMat = new THREE.MeshBasicMaterial({ color: 0xc2a233, side: THREE.BackSide });
+        const room = new THREE.Mesh(roomGeo, roomMat);
+        scene.add(room);
+
+        camera.position.set(0, 0, 5);
+
+        let survivalTime = 0;
+        setInterval(() => {
+            survivalTime++;
+            document.getElementById('score').innerText = survivalTime;
+        }, 1000);
+
+        // Hiệu ứng camera xoay vòng giả lập góc nhìn
+        function animate() {
+            requestAnimationFrame(animate);
+            camera.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Xử lý đổi kích thước màn hình điện thoại
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+
