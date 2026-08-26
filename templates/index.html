@@ -2,84 +2,147 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backrooms 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Backrooms 3D Mobile</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
             position: absolute;
-            top: 15px;
-            left: 15px;
+            top: 20px;
+            left: 20px;
             color: #ffeb3b;
             font-size: 22px;
             font-weight: bold;
             text-shadow: 2px 2px 4px #000;
             z-index: 10;
         }
+        /* Hướng dẫn thao tác */
+        #hint {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 1px 1px 2px #000;
+        }
     </style>
 </head>
 <body>
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
+    <div id="hint">Vuốt màn hình để xoay hướng • Chạm giữ để di chuyển</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // 1. Khởi tạo Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd4af37); // Màu vàng kinh điển Backrooms
+        scene.background = new THREE.Color(0xd4af37); // Màu vàng đặc trưng Backrooms
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. Thêm ánh sáng
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+        // 2. Ánh sáng
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
-        // 3. Tạo các bức tường hành lang Backrooms để thấy không gian 3D rõ hơn
-        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xb5902d, wireframe: false });
+        // 3. Tạo các bức tường mê cung hành lang
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xb5902d });
         
-        // Tường trái
-        const wallLeftGeo = new THREE.BoxGeometry(2, 10, 50);
-        const wallLeft = new THREE.Mesh(wallLeftGeo, wallMaterial);
-        wallLeft.position.set(-6, 0, -20);
-        scene.add(wallLeft);
+        // Tạo nhiều đoạn tường nối dài tạo thành hành lang
+        for (let i = 0; i > -100; i -= 20) {
+            // Tường trái
+            const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 20), wallMaterial);
+            wallLeft.position.set(-6, 0, i);
+            scene.add(wallLeft);
 
-        // Tường phải
-        const wallRight = new THREE.Mesh(wallLeftGeo, wallMaterial);
-        wallRight.position.set(6, 0, -20);
-        scene.add(wallRight);
+            // Tường phải
+            const wallRight = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 20), wallMaterial);
+            wallRight.position.set(6, 0, i);
+            scene.add(wallRight);
+        }
 
-        // Tường trước mặt
-        const wallBackGeo = new THREE.BoxGeometry(14, 10, 2);
-        const wallBack = new THREE.Mesh(wallBackGeo, wallMaterial);
-        wallBack.position.set(0, 0, -45);
-        scene.add(wallBack);
-
-        // Đặt vị trí camera đứng giữa hành lang
+        // Đặt vị trí ban đầu của người chơi
         camera.position.set(0, 0, 5);
 
+        // Biến điều khiển góc nhìn và di chuyển
+        let pitch = 0; // Góc nhìn lên xuống
+        let yaw = 0;   // Góc nhìn trái phải
+        let isMoving = false;
+
+        // Xử lý vuốt màn hình để quay góc nhìn (Look around)
+        let isTouchDragging = false;
+        let previousTouchPosition = { x: 0, y: 0 };
+
+        window.addEventListener('touchstart', (e) => {
+            isTouchDragging = true;
+            isMoving = true; // Chạm vào màn hình là tiến bước
+            previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isTouchDragging) return;
+            const currentTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            const deltaX = currentTouchPosition.x - previousTouchPosition.x;
+            const deltaY = currentTouchPosition.y - previousTouchPosition.y;
+
+            yaw -= deltaX * 0.003;
+            pitch -= deltaY * 0.003;
+
+            // Giới hạn góc nhìn lên xuống không bị lật ngược đầu
+            pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+
+            previousTouchPosition = currentTouchPosition;
+        });
+
+        window.addEventListener('touchend', () => {
+            isTouchDragging = false;
+            isMoving = false;
+        });
+
+        // Hỗ trợ cả chuột trên máy tính (nếu test trên pc)
+        let isMouseDown = false;
+        window.addEventListener('mousedown', (e) => { isMouseDown = true; isMoving = true; previousTouchPosition = { x: e.clientX, y: e.clientY }; });
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+            yaw -= (e.clientX - previousTouchPosition.x) * 0.003;
+            pitch -= (e.clientY - previousTouchPosition.y) * 0.003;
+            previousTouchPosition = { x: e.clientX, y: e.clientY };
+        });
+        window.addEventListener('mouseup', () => { isMouseDown = false; isMoving = false; });
+
+        // Bộ đếm thời gian sinh tồn
         let survivalTime = 0;
         setInterval(() => {
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
         }, 1000);
 
-        // 4. Hiệu ứng camera tiến/lùi hoặc di chuyển trong hành lang
-        let zPos = 5;
+        // Vòng lặp render game
+        const direction = new THREE.Vector3();
         function animate() {
             requestAnimationFrame(animate);
-            
-            // Cho camera tiến dần về phía trước tạo cảm giác đang đi sâu vào Backrooms
-            zPos -= 0.05;
-            if (zPos < -30) zPos = 5; // Lặp lại hành lang
-            camera.position.z = zPos;
+
+            // Nếu đang chạm giữ màn hình, nhân vật sẽ tiến về phía trước theo hướng đang nhìn
+            if (isMoving) {
+                camera.getWorldDirection(direction);
+                camera.position.addScaledVector(direction, 0.08);
+            }
+
+            // Tính toán hướng nhìn 3D của camera
+            const quaternion = new THREE.Quaternion();
+            const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+            quaternion.setFromEuler(euler);
+            camera.quaternion.copy(quaternion);
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // Xử lý xoay ngang dọc theo màn hình điện thoại
+        // Xoay ngang dọc màn hình điện thoại
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -88,3 +151,4 @@
     </script>
 </body>
 </html>
+
