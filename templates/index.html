@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms 3D Mobile</title>
+    <title>Backrooms 3D Maze</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -16,14 +16,36 @@
             text-shadow: 2px 2px 4px #000;
             z-index: 10;
         }
-        /* Hướng dẫn thao tác */
+        /* Nút điều khiển ảo trên màn hình */
+        .control-btn {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .control-btn:active { background: rgba(255, 255, 255, 0.5); }
+        
+        #btn-forward { bottom: 120px; left: 50%; transform: translateX(-50%); }
+        #btn-back { bottom: 30px; left: 50%; transform: translateX(-50%); }
+        #btn-left { bottom: 75px; left: calc(50% - 80px); }
+        #btn-right { bottom: 75px; left: calc(50% + 10px); }
+
         #hint {
             position: absolute;
-            bottom: 20px;
+            bottom: 210px;
             width: 100%;
             text-align: center;
             color: rgba(255,255,255,0.7);
-            font-size: 14px;
+            font-size: 13px;
             pointer-events: none;
             z-index: 10;
             text-shadow: 1px 1px 2px #000;
@@ -32,11 +54,16 @@
 </head>
 <body>
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
-    <div id="hint">Vuốt màn hình để xoay hướng • Chạm giữ để di chuyển</div>
+    <div id="hint">Vuốt màn hình ngang để xoay góc nhìn</div>
+
+    <div id="btn-forward" class="control-btn">▲</div>
+    <div id="btn-left" class="control-btn">◀</div>
+    <div id="btn-right" class="control-btn">▶</div>
+    <div id="btn-back" class="control-btn">▼</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // 1. Khởi tạo Scene, Camera, Renderer
+        // 1. Khởi tạo không gian 3D
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xd4af37); // Màu vàng đặc trưng Backrooms
 
@@ -45,104 +72,114 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. Ánh sáng
+        // Ánh sáng phòng
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
-        // 3. Tạo các bức tường mê cung hành lang
-        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xb5902d });
-        
-        // Tạo nhiều đoạn tường nối dài tạo thành hành lang
-        for (let i = 0; i > -100; i -= 20) {
-            // Tường trái
-            const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 20), wallMaterial);
-            wallLeft.position.set(-6, 0, i);
-            scene.add(wallLeft);
+        // 2. Thiết kế bản đồ mê cung nhiều ngã rẽ (0: hành lang trống, 1: tường)
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,0,1],
+            [1,0,1,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1],
+            [1,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,0,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ];
 
-            // Tường phải
-            const wallRight = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 20), wallMaterial);
-            wallRight.position.set(6, 0, i);
-            scene.add(wallRight);
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xb5902d });
+        const tileSize = 6;
+
+        // Vẽ mê cung từ bản đồ
+        for (let z = 0; z < map.length; z++) {
+            for (let x = 0; x < map[z].length; x++) {
+                if (map[z][x] === 1) {
+                    const wallGeo = new THREE.BoxGeometry(tileSize, 10, tileSize);
+                    const wall = new THREE.Mesh(wallGeo, wallMaterial);
+                    // Căn chỉnh vị trí tường theo lưới
+                    wall.position.set((x - map[z].length / 2) * tileSize, 0, (z - map.length / 2) * tileSize);
+                    scene.add(wall);
+                }
+            }
         }
 
-        // Đặt vị trí ban đầu của người chơi
-        camera.position.set(0, 0, 5);
+        // Vị trí ban đầu của người chơi
+        camera.position.set(-12, 0, -12);
+        camera.rotation.y = 0;
 
-        // Biến điều khiển góc nhìn và di chuyển
-        let pitch = 0; // Góc nhìn lên xuống
-        let yaw = 0;   // Góc nhìn trái phải
-        let isMoving = false;
+        let yaw = 0; // Chỉ cho phép xoay ngang trái/phải
 
-        // Xử lý vuốt màn hình để quay góc nhìn (Look around)
-        let isTouchDragging = false;
-        let previousTouchPosition = { x: 0, y: 0 };
+        // 3. Xử lý vuốt màn hình để xoay góc nhìn ngang
+        let isDragging = false;
+        let prevX = 0;
 
         window.addEventListener('touchstart', (e) => {
-            isTouchDragging = true;
-            isMoving = true; // Chạm vào màn hình là tiến bước
-            previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            isDragging = true;
+            prevX = e.touches[0].clientX;
         });
 
         window.addEventListener('touchmove', (e) => {
-            if (!isTouchDragging) return;
-            const currentTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            const deltaX = currentTouchPosition.x - previousTouchPosition.x;
-            const deltaY = currentTouchPosition.y - previousTouchPosition.y;
-
-            yaw -= deltaX * 0.003;
-            pitch -= deltaY * 0.003;
-
-            // Giới hạn góc nhìn lên xuống không bị lật ngược đầu
-            pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-
-            previousTouchPosition = currentTouchPosition;
+            if (!isDragging) return;
+            const currentX = e.touches[0].clientX;
+            const deltaX = currentX - prevX;
+            yaw -= deltaX * 0.004; // Xoay ngang mượt mà
+            prevX = currentX;
         });
 
-        window.addEventListener('touchend', () => {
-            isTouchDragging = false;
-            isMoving = false;
-        });
+        window.addEventListener('touchend', () => { isDragging = false; });
 
-        // Hỗ trợ cả chuột trên máy tính (nếu test trên pc)
-        let isMouseDown = false;
-        window.addEventListener('mousedown', (e) => { isMouseDown = true; isMoving = true; previousTouchPosition = { x: e.clientX, y: e.clientY }; });
-        window.addEventListener('mousemove', (e) => {
-            if (!isMouseDown) return;
-            yaw -= (e.clientX - previousTouchPosition.x) * 0.003;
-            pitch -= (e.clientY - previousTouchPosition.y) * 0.003;
-            previousTouchPosition = { x: e.clientX, y: e.clientY };
-        });
-        window.addEventListener('mouseup', () => { isMouseDown = false; isMoving = false; });
+        // 4. Xử lý sự kiện bấm các nút di chuyển
+        const moveState = { forward: false, back: false, left: false, right: false };
 
-        // Bộ đếm thời gian sinh tồn
+        function bindButton(id, direction) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[direction] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); moveState[direction] = false; });
+            // Hỗ trợ cả click chuột trên máy tính
+            btn.addEventListener('mousedown', () => { moveState[direction] = true; });
+            btn.addEventListener('mouseup', () => { moveState[direction] = false; });
+        }
+
+        bindButton('btn-forward', 'forward');
+        bindButton('btn-back', 'back');
+        bindButton('btn-left', 'left');
+        bindButton('btn-right', 'right');
+
+        // Bộ đếm thời gian
         let survivalTime = 0;
         setInterval(() => {
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
         }, 1000);
 
-        // Vòng lặp render game
-        const direction = new THREE.Vector3();
+        // 5. Vòng lặp cập nhật chuyển động và camera
+        const speed = 0.08;
         function animate() {
             requestAnimationFrame(animate);
 
-            // Nếu đang chạm giữ màn hình, nhân vật sẽ tiến về phía trước theo hướng đang nhìn
-            if (isMoving) {
-                camera.getWorldDirection(direction);
-                camera.position.addScaledVector(direction, 0.08);
-            }
+            // Cố định góc nhìn cao độ bằng 0 (chỉ đi ngang, không lên xuống)
+            camera.rotation.set(0, yaw, 0);
 
-            // Tính toán hướng nhìn 3D của camera
-            const quaternion = new THREE.Quaternion();
-            const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
-            quaternion.setFromEuler(euler);
-            camera.quaternion.copy(quaternion);
+            // Tính toán hướng di chuyển
+            const moveDir = new THREE.Vector3();
+            if (moveState.forward) moveDir.z -= 1;
+            if (moveState.back) moveDir.z += 1;
+            if (moveState.left) moveDir.x -= 1;
+            if (moveState.right) moveDir.x += 1;
+
+            moveDir.normalize();
+            moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+            // Di chuyển camera theo hướng đã chọn
+            camera.position.addScaledVector(moveDir, speed);
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // Xoay ngang dọc màn hình điện thoại
+        // Xử lý xoay ngang dọc màn hình điện thoại
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
