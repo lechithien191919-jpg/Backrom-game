@@ -3,45 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backrooms 3D Mobile</title>
+    <title>Backrooms 3D</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
         #ui {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 15px;
+            left: 15px;
             color: #ffeb3b;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             text-shadow: 2px 2px 4px #000;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
 
-    <!-- Thư viện Three.js để vẽ 3D trên trình duyệt -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Khởi tạo không gian 3D cơ bản
+        // 1. Khởi tạo Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd4af37); // Màu vàng đặc trưng của Backrooms
+        scene.background = new THREE.Color(0xd4af37); // Màu vàng kinh điển Backrooms
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Ánh sáng phòng
-        const light = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(light);
+        // 2. Thêm ánh sáng
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(ambientLight);
 
-        // Tạo một căn phòng mê cung đơn giản (Hộp 3D)
-        const roomGeo = new THREE.BoxGeometry(20, 10, 20);
-        const roomMat = new THREE.MeshBasicMaterial({ color: 0xc2a233, side: THREE.BackSide });
-        const room = new THREE.Mesh(roomGeo, roomMat);
-        scene.add(room);
+        // 3. Tạo các bức tường hành lang Backrooms để thấy không gian 3D rõ hơn
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xb5902d, wireframe: false });
+        
+        // Tường trái
+        const wallLeftGeo = new THREE.BoxGeometry(2, 10, 50);
+        const wallLeft = new THREE.Mesh(wallLeftGeo, wallMaterial);
+        wallLeft.position.set(-6, 0, -20);
+        scene.add(wallLeft);
 
+        // Tường phải
+        const wallRight = new THREE.Mesh(wallLeftGeo, wallMaterial);
+        wallRight.position.set(6, 0, -20);
+        scene.add(wallRight);
+
+        // Tường trước mặt
+        const wallBackGeo = new THREE.BoxGeometry(14, 10, 2);
+        const wallBack = new THREE.Mesh(wallBackGeo, wallMaterial);
+        wallBack.position.set(0, 0, -45);
+        scene.add(wallBack);
+
+        // Đặt vị trí camera đứng giữa hành lang
         camera.position.set(0, 0, 5);
 
         let survivalTime = 0;
@@ -50,15 +65,21 @@
             document.getElementById('score').innerText = survivalTime;
         }, 1000);
 
-        // Hiệu ứng camera xoay vòng giả lập góc nhìn
+        // 4. Hiệu ứng camera tiến/lùi hoặc di chuyển trong hành lang
+        let zPos = 5;
         function animate() {
             requestAnimationFrame(animate);
-            camera.rotation.y += 0.005;
+            
+            // Cho camera tiến dần về phía trước tạo cảm giác đang đi sâu vào Backrooms
+            zPos -= 0.05;
+            if (zPos < -30) zPos = 5; // Lặp lại hành lang
+            camera.position.z = zPos;
+
             renderer.render(scene, camera);
         }
         animate();
 
-        // Xử lý đổi kích thước màn hình điện thoại
+        // Xử lý xoay ngang dọc theo màn hình điện thoại
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -67,4 +88,3 @@
     </script>
 </body>
 </html>
-
