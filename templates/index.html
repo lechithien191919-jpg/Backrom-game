@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Infinite 3D</title>
+    <title>Backrooms Maze & Hallway</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -78,18 +78,18 @@
         const ambientLight = new THREE.AmbientLight(0xfffff0, 1.0);
         scene.add(ambientLight);
 
-        // Vật liệu phòng Backrooms
+        // Vật liệu
         const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
         const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xcdb14c });
         const floorMat = new THREE.MeshBasicMaterial({ color: 0xdbcc76 });
         const ceilingMat = new THREE.MeshBasicMaterial({ color: 0xe3d488 });
         
-        const tileSize = 20; // Khoảng cách lớn giữa các trụ/phòng (tạo khoảng trống rộng thênh thang)
-        const generatedChunks = new Set(); // Lưu lại các khu vực đã tạo để không bị lặp
+        const tileSize = 10;
+        const generatedChunks = new Set();
 
-        // Hàm tạo phòng tự động vô tận xung quanh vị trí người chơi
-        function updateInfiniteRooms(playerX, playerZ) {
-            const renderDistance = 3; // Phạm vi sinh phòng xung quanh
+        // Thuật toán phân chia khu vực: Đan xen giữa hành lang mê cung hẹp và sảnh lớn nghỉ ngơi
+        function updateInfiniteBackrooms(playerX, playerZ) {
+            const renderDistance = 4;
             const pChunkX = Math.floor(playerX / tileSize);
             const pChunkZ = Math.floor(playerZ / tileSize);
 
@@ -102,31 +102,35 @@
                         const posX = x * tileSize;
                         const posZ = z * tileSize;
 
-                        // Tạo Sàn
+                        // Tạo sàn và trần cho mọi ô
                         const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
                         const floor = new THREE.Mesh(floorGeo, floorMat);
                         floor.rotation.x = -Math.PI / 2;
-                        floor.position.set(posX, -6, posZ);
+                        floor.position.set(posX, -5, posZ);
                         scene.add(floor);
 
-                        // Tạo Trần
                         const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
                         ceiling.rotation.x = Math.PI / 2;
-                        ceiling.position.set(posX, 6, posZ);
+                        ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Thỉnh thoảng dựng một cột trụ lớn giữa phòng để tạo khoảng trống nghệ thuật (cứ cách vài ô lại có cột)
-                        if (Math.abs(x % 3) === 0 && Math.abs(z % 3) === 0) {
-                            const pillarGeo = new THREE.BoxGeometry(6, 12, 6);
-                            const pillar = new THREE.Mesh(pillarGeo, pillarMaterial);
-                            pillar.position.set(posX, 0, posZ);
-                            scene.add(pillar);
-                        }
+                        // Xác định khu vực: Cứ cách một đoạn xa sẽ là "Sảnh lớn nghỉ ngơi", còn lại là "Hành lang mê cung"
+                        const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
-                        // Tạo tường biên bao quanh bên ngoài các sảnh lớn
-                        if (Math.abs(x) >= 6 || Math.abs(z) >= 6) {
-                            if (Math.abs(x) % 6 === 0) {
-                                const wallGeo = new THREE.BoxGeometry(2, 12, tileSize);
+                        if (isBigHallway) {
+                            // Đây là Sảnh lớn nghỉ ngơi (Không gian rộng, có cột trụ)
+                            if (Math.abs(x % 3) === 0 && Math.abs(z % 3) === 0) {
+                                const pillarGeo = new THREE.BoxGeometry(4, 10, 4);
+                                const pillar = new THREE.Mesh(pillarGeo, pillarMaterial);
+                                pillar.position.set(posX, 0, posZ);
+                                scene.add(pillar);
+                            }
+                        } else {
+                            // Đây là Hành lang mê cung hẹp nối dài
+                            // Sử dụng hàm toán học giả ngẫu nhiên dựa trên tọa độ để tạo tường mê cung cố định, không đổi
+                            const mazePattern = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+                            if (Math.floor(Math.abs(mazePattern) * 10) % 3 === 0) {
+                                const wallGeo = new THREE.BoxGeometry(tileSize, 10, tileSize);
                                 const wall = new THREE.Mesh(wallGeo, wallMaterial);
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
@@ -137,14 +141,13 @@
             }
         }
 
-        // Vị trí xuất phát
+        // Vị trí xuất phát ở sảnh lớn
         camera.position.set(0, 0, 0);
         let yaw = 0;
 
-        // Sinh phòng ban đầu
-        updateInfiniteRooms(0, 0);
+        updateInfiniteBackrooms(0, 0);
 
-        // 2. Xử lý vuốt màn hình xoay góc nhìn ngang
+        // 2. Xử lý vuốt màn hình ngang xoay góc nhìn
         let isDragging = false;
         let prevX = 0;
 
@@ -211,15 +214,15 @@
         joystickBase.addEventListener('touchend', resetJoystick);
         joystickBase.addEventListener('touchcancel', resetJoystick);
 
-        // Bộ đếm thời gian sinh tồn
+        // Bộ đếm thời gian
         let survivalTime = 0;
         setInterval(() => {
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
         }, 1000);
 
-        // 4. Vòng lặp game vô tận
-        const speed = 0.12;
+        // 4. Vòng lặp game
+        const speed = 0.1;
         function animate() {
             requestAnimationFrame(animate);
 
@@ -230,8 +233,8 @@
                 moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
                 camera.position.addScaledVector(moveDir, speed);
 
-                // Cập nhật liên tục các phòng mới khi người chơi di chuyển đi xa
-                updateInfiniteRooms(camera.position.x, camera.position.z);
+                // Sinh map liên tục theo bước chân người chơi
+                updateInfiniteBackrooms(camera.position.x, camera.position.z);
             }
 
             renderer.render(scene, camera);
