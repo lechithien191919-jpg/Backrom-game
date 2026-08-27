@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Full Features</title>
+    <title>Backrooms Collision & Features</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -58,14 +58,14 @@
             pointer-events: none;
         }
         
-        /* Nút Chạy nước rút (Sprint) */
+        /* Nút Chạy (Bật/Tắt) */
         #sprint-btn {
             position: absolute;
             bottom: 60px;
             right: 40px;
             width: 85px;
             height: 85px;
-            background: rgba(255, 235, 59, 0.3);
+            background: rgba(255, 235, 59, 0.2);
             border: 2px solid rgba(255, 235, 59, 0.8);
             border-radius: 50%;
             color: #ffeb3b;
@@ -77,6 +77,12 @@
             z-index: 10;
             touch-action: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: background 0.2s;
+        }
+        #sprint-btn.active {
+            background: rgba(76, 175, 80, 0.7);
+            border-color: #4caf50;
+            color: #fff;
         }
 
         /* Joystick ảo di chuyển */
@@ -130,7 +136,7 @@
         <div id="joystick-knob"></div>
     </div>
 
-    <!-- Web Audio API tạo âm thanh nền & tiếng bước chân -->
+    <!-- Web Audio API Âm thanh -->
     <script>
         let audioCtx = null;
         function initAudio() {
@@ -139,21 +145,17 @@
                 playAmbientHum();
             }
         }
-
-        // Âm thanh đèn huỳnh quang rè rè ám ảnh
         function playAmbientHum() {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(60, audioCtx.currentTime); // Tần số thấp tạo tiếng rè
+            osc.frequency.setValueAtTime(60, audioCtx.currentTime);
             gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
         }
-
-        // Tiếng bước chân
         function playFootstep() {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -168,7 +170,6 @@
             osc.start();
             osc.stop(audioCtx.currentTime + 0.1);
         }
-
         window.addEventListener('touchstart', initAudio, { once: true });
     </script>
 
@@ -182,11 +183,9 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Ánh sáng phòng có thể chớp tắt
         const ambientLight = new THREE.AmbientLight(0xfffff0, 1.0);
         scene.add(ambientLight);
 
-        // Vật liệu
         const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
         const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xcdb14c });
         const floorMat = new THREE.MeshBasicMaterial({ color: 0xdbcc76 });
@@ -194,11 +193,12 @@
         
         const tileSize = 10;
         const generatedChunks = new Set();
-        const almondWaters = []; // Danh sách chai nước rải rác
+        const almondWaters = [];
+        const ceilingLights = [];
+        const collisionBoxes = []; // Mảng lưu các khối va chạm (tường và cột)
         let waterCount = 0;
         let survivalTime = 0;
 
-        // Tạo vật phẩm Nước Hạnh Nhân 3D đơn giản
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
             const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
@@ -208,7 +208,7 @@
             almondWaters.push({ mesh: bottle, x: posX, z: posZ, collected: false });
         }
 
-        // Sinh bản đồ vô tận + rải vật phẩm
+        // Sinh bản đồ và tạo vùng va chạm cho tường/cột
         function updateInfiniteBackrooms(playerX, playerZ) {
             const renderDistance = 4;
             const pChunkX = Math.floor(playerX / tileSize);
@@ -223,16 +223,27 @@
                         const posX = x * tileSize;
                         const posZ = z * tileSize;
 
+                        // Sàn
                         const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
                         const floor = new THREE.Mesh(floorGeo, floorMat);
                         floor.rotation.x = -Math.PI / 2;
                         floor.position.set(posX, -5, posZ);
                         scene.add(floor);
 
+                        // Trần
                         const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
                         ceiling.rotation.x = Math.PI / 2;
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
+
+                        // Đèn trần chớp chớp
+                        const lightGeo = new THREE.PlaneGeometry(3, 3);
+                        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+                        const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
+                        ceilingLight.rotation.x = Math.PI / 2;
+                        ceilingLight.position.set(posX, 4.98, posZ);
+                        scene.add(ceilingLight);
+                        ceilingLights.push(ceilingLight);
 
                         const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
@@ -243,7 +254,9 @@
                                 pillar.position.set(posX, 0, posZ);
                                 scene.add(pillar);
 
-                                // Rải chai nước ở các góc sảnh nghỉ ngơi
+                                // Thêm vào danh sách va chạm cột trụ
+                                collisionBoxes.push({ x: posX, z: posX ? posX : posX, minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
+
                                 if (Math.random() < 0.4) {
                                     createAlmondWater(posX + 2, posZ + 2);
                                 }
@@ -255,6 +268,9 @@
                                 const wall = new THREE.Mesh(wallGeo, wallMaterial);
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
+
+                                // Thêm vào danh sách va chạm tường
+                                collisionBoxes.push({ minX: posX - tileSize/2, maxX: posX + tileSize/2, minZ: posZ - tileSize/2, maxZ: posZ + tileSize/2 });
                             }
                         }
                     }
@@ -266,23 +282,46 @@
         let yaw = 0;
         updateInfiniteBackrooms(0, 0);
 
-        // Xử lý vuốt màn hình xoay nhìn
+        // Kiểm tra va chạm hộp (AABB Collision)
+        function checkCollision(nextX, nextZ) {
+            const playerRadius = 0.6; // Bán kính thân người chơi
+            for (let box of collisionBoxes) {
+                if (
+                    nextX + playerRadius > box.minX &&
+                    nextX - playerRadius < box.maxX &&
+                    nextZ + playerRadius > box.minZ &&
+                    nextZ - playerRadius < box.maxZ
+                ) {
+                    return true; // Có va chạm
+                }
+            }
+            return false; // Không va chạm
+        }
+
+        // Xử lý vuốt màn hình mượt mà
         let isDragging = false;
         let prevX = 0;
         window.addEventListener('touchstart', (e) => {
-            if (e.touches[0].clientX < 180 && e.touches[0].clientY > window.innerHeight - 180) return;
+            if (e.target.id === 'sprint-btn' || e.target.closest('#joystick-base')) return;
             isDragging = true;
             prevX = e.touches[0].clientX;
-        });
+        }, { passive: true });
+
         window.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-            const currentX = e.touches[0].clientX;
-            yaw -= (currentX - prevX) * 0.004;
-            prevX = currentX;
-        });
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].clientX > window.innerWidth * 0.3 || isDragging) {
+                    const currentX = e.touches[i].clientX;
+                    yaw -= (currentX - prevX) * 0.004;
+                    prevX = currentX;
+                    break;
+                }
+            }
+        }, { passive: true });
+
         window.addEventListener('touchend', () => { isDragging = false; });
 
-        // Joystick điều khiển di chuyển
+        // Joystick điều khiển
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
         let moveVector = { x: 0, z: 0 };
@@ -292,6 +331,7 @@
             e.preventDefault();
             joystickTouchId = e.changedTouches[0].identifier;
         });
+
         joystickBase.addEventListener('touchmove', (e) => {
             e.preventDefault();
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -309,6 +349,7 @@
                 }
             }
         });
+
         const resetJoystick = () => {
             joystickTouchId = null;
             joystickKnob.style.transform = `translate(0px, 0px)`;
@@ -317,22 +358,28 @@
         joystickBase.addEventListener('touchend', resetJoystick);
         joystickBase.addEventListener('touchcancel', resetJoystick);
 
-        // Nút Chạy & Thể lực (Stamina)
+        // Nút Chạy (Bật/Tắt)
         let isSprinting = false;
         let stamina = 100;
         const sprintBtn = document.getElementById('sprint-btn');
         const staminaBar = document.getElementById('stamina-bar');
 
-        sprintBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if(stamina > 10) isSprinting = true; });
-        sprintBtn.addEventListener('touchend', (e) => { e.preventDefault(); isSprinting = false; });
+        sprintBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isSprinting && stamina > 5) {
+                isSprinting = true;
+                sprintBtn.classList.add('active');
+            } else {
+                isSprinting = false;
+                sprintBtn.classList.remove('active');
+            }
+        });
 
-        // Bộ đếm thời gian sinh tồn
         setInterval(() => {
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
         }, 1000);
 
-        // Hiển thị thông báo nhặt đồ
         function showMsg(txt) {
             const m = document.getElementById('message');
             m.innerText = txt;
@@ -340,7 +387,6 @@
             setTimeout(() => { m.style.opacity = '0'; }, 1500);
         }
 
-        // Vòng lặp game chính
         let stepTimer = 0;
         const normalSpeed = 0.1;
         const sprintSpeed = 0.22;
@@ -350,26 +396,38 @@
 
             camera.rotation.set(0, yaw, 0);
 
-            // Xử lý thể lực chạy
             let currentSpeed = normalSpeed;
             if (isSprinting && (moveVector.x !== 0 || moveVector.z !== 0)) {
                 stamina -= 0.8;
                 currentSpeed = sprintSpeed;
-                if (stamina <= 0) { stamina = 0; isSprinting = false; }
+                if (stamina <= 0) {
+                    stamina = 0;
+                    isSprinting = false;
+                    sprintBtn.classList.remove('active');
+                }
             } else {
                 if (stamina < 100) stamina += 0.3;
             }
             staminaBar.style.width = stamina + '%';
 
-            // Di chuyển nhân vật
+            // Di chuyển có kiểm tra va chạm tường/cột
             if (moveVector.x !== 0 || moveVector.z !== 0) {
                 const moveDir = new THREE.Vector3(moveVector.x, 0, moveVector.z);
                 moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-                camera.position.addScaledVector(moveDir, currentSpeed);
+
+                const nextX = camera.position.x + moveDir.x * currentSpeed;
+                const nextZ = camera.position.z + moveDir.z * currentSpeed;
+
+                // Kiểm tra va chạm từng trục để trượt tường mượt mà
+                if (!checkCollision(nextX, camera.position.z)) {
+                    camera.position.x = nextX;
+                }
+                if (!checkCollision(camera.position.x, nextZ)) {
+                    camera.position.z = nextZ;
+                }
 
                 updateInfiniteBackrooms(camera.position.x, camera.position.z);
 
-                // Phát tiếng bước chân theo nhịp
                 stepTimer += currentSpeed;
                 if (stepTimer > 1.2) {
                     playFootstep();
@@ -377,12 +435,19 @@
                 }
             }
 
-            // Hiệu ứng đèn chập chờn (Flicker) ngẫu nhiên
+            // Đèn trần chớp chớp
+            ceilingLights.forEach(light => {
+                if (Math.random() < 0.02) {
+                    light.material.opacity = Math.random() < 0.4 ? 0.2 : 1.0;
+                    light.material.transparent = true;
+                }
+            });
+
             if (Math.random() < 0.03) {
                 ambientLight.intensity = Math.random() < 0.3 ? 0.3 : 1.0;
             }
 
-            // Kiểm tra nhặt Nước Hạnh Nhân khi đi lại gần
+            // Nhặt nước hạnh nhân
             almondWaters.forEach(w => {
                 if (!w.collected) {
                     w.mesh.rotation.y += 0.05;
@@ -391,7 +456,7 @@
                         w.collected = true;
                         scene.remove(w.mesh);
                         waterCount++;
-                        survivalTime += 15; // Thưởng thời gian sinh tồn
+                        survivalTime += 15;
                         document.getElementById('water-count').innerText = waterCount;
                         showMsg("Đã nhặt Nước Hạnh Nhân! (+15s)");
                     }
