@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Working Movement & Lights</title>
+    <title>Backrooms Final Version</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -231,15 +231,8 @@
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Đèn trần: Viền khung xám mảnh xung quanh + bóng đèn phát sáng
-                        const frameGeo = new THREE.PlaneGeometry(2.4, 2.4);
-                        const frameMat = new THREE.MeshBasicMaterial({ color: 0x555555 });
-                        const lightFrame = new THREE.Mesh(frameGeo, frameMat);
-                        lightFrame.rotation.x = Math.PI / 2;
-                        lightFrame.position.set(posX, 4.97, posZ);
-                        scene.add(lightFrame);
-
-                        const lightGeo = new THREE.PlaneGeometry(2.0, 2.0);
+                        // Đèn trần kiểu bản cũ (ô vuông sáng đơn giản + đèn PointLight chiếu sáng)
+                        const lightGeo = new THREE.PlaneGeometry(3, 3);
                         const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
                         const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
                         ceilingLight.rotation.x = Math.PI / 2;
@@ -261,7 +254,6 @@
                                 pillar.position.set(posX, 0, posZ);
                                 scene.add(pillar);
 
-                                // Chỉ thêm va chạm khi cách xa điểm xuất phát (0,0) để tránh kẹt lúc đầu game
                                 if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
                                     collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
                                 }
@@ -475,4 +467,3 @@
     </script>
 </body>
 </html>
-
