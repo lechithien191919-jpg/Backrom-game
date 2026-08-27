@@ -11,38 +11,65 @@
             top: 20px;
             left: 20px;
             color: #ffeb3b;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             text-shadow: 2px 2px 4px #000;
             z-index: 10;
         }
-        #stamina-container {
+        #bars-container {
             position: absolute;
-            top: 55px;
+            top: 50px;
             left: 20px;
             width: 150px;
-            height: 12px;
+            z-index: 10;
+        }
+        .bar-box {
+            width: 100%;
+            height: 10px;
             background: rgba(0,0,0,0.5);
             border: 2px solid #ffeb3b;
-            border-radius: 6px;
-            z-index: 10;
+            border-radius: 5px;
+            margin-bottom: 5px;
             overflow: hidden;
         }
-        #stamina-bar {
+        .bar-fill {
             width: 100%;
             height: 100%;
             background: #4caf50;
             transition: width 0.1s linear;
         }
-        #inventory {
+        #sanity-bar { background: #00bcd4; }
+
+        #inv-btn {
             position: absolute;
-            top: 80px;
-            left: 20px;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #fff;
             color: #fff;
-            font-size: 16px;
-            text-shadow: 1px 1px 2px #000;
-            z-index: 10;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 20;
+            cursor: pointer;
         }
+        #inventory-panel {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 2px solid #ffeb3b;
+            border-radius: 10px;
+            padding: 15px;
+            color: #fff;
+            width: 180px;
+            z-index: 20;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+        #inventory-panel h3 { margin: 0 0 10px 0; font-size: 15px; color: #ffeb3b; border-bottom: 1px solid #444; padding-bottom: 5px; }
+
         #message {
             position: absolute;
             top: 30%;
@@ -56,19 +83,19 @@
             opacity: 0;
             transition: opacity 0.5s;
             pointer-events: none;
+            text-align: center;
         }
         
-        #sprint-btn {
+        .control-btn {
             position: absolute;
             bottom: 60px;
-            right: 40px;
-            width: 85px;
-            height: 85px;
+            width: 75px;
+            height: 75px;
             background: rgba(255, 235, 59, 0.2);
             border: 2px solid rgba(255, 235, 59, 0.8);
             border-radius: 50%;
             color: #ffeb3b;
-            font-size: 15px;
+            font-size: 13px;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -78,7 +105,9 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.4);
             transition: background 0.2s;
         }
-        #sprint-btn.active {
+        #sprint-btn { right: 30px; }
+        #flashlight-btn { right: 115px; }
+        .control-btn.active {
             background: rgba(76, 175, 80, 0.7);
             border-color: #4caf50;
             color: #fff;
@@ -123,12 +152,23 @@
 </head>
 <body>
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
-    <div id="stamina-container"><div id="stamina-bar"></div></div>
-    <div id="inventory">💧 Nước hạnh nhân: <span id="water-count">0</span></div>
+    <div id="bars-container">
+        <div class="bar-box" title="Thể lực"><div id="stamina-bar" class="bar-fill"></div></div>
+        <div class="bar-box" title="Độ tỉnh táo"><div id="sanity-bar" class="bar-fill" style="background:#00bcd4;"></div></div>
+    </div>
+
+    <button id="inv-btn" onclick="toggleInventory()">📦 TÚI ĐỒ</button>
+    <div id="inventory-panel">
+        <h3>TÚI ĐỒ SINH TỒN</h3>
+        <div>💧 Nước hạnh nhân: <span id="water-count">0</span></div>
+        <div style="margin-top: 8px;">🔋 Pin đèn pin: <span id="battery-count">100</span>%</div>
+    </div>
+
     <div id="message">Đã nhặt Nước Hạnh Nhân! (+15s)</div>
     <div id="hint">Vuốt màn hình ngang để xoay góc nhìn</div>
 
-    <div id="sprint-btn">CHẠY</div>
+    <div id="flashlight-btn" class="control-btn">ĐÈN PIN</div>
+    <div id="sprint-btn" class="control-btn">CHẠY</div>
     <div id="joystick-base">
         <div id="joystick-knob"></div>
     </div>
@@ -179,8 +219,16 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.8);
         scene.add(ambientLight);
+
+        // Thêm đèn pin gắn vào camera
+        const flashlight = new THREE.SpotLight(0xffffff, 0, 15, Math.PI / 4, 0.5, 1);
+        flashlight.position.set(0, 0, 0);
+        camera.add(flashlight);
+        flashlight.target.position.set(0, 0, -5);
+        camera.add(flashlight.target);
+        scene.add(camera);
 
         const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
         const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xcdb14c });
@@ -190,10 +238,16 @@
         const tileSize = 10;
         const generatedChunks = new Set();
         const almondWaters = [];
-        const ceilingLights = [];
         const collisionBoxes = [];
         let waterCount = 0;
         let survivalTime = 0;
+        let batteryLevel = 100;
+        let sanity = 100;
+
+        function toggleInventory() {
+            const panel = document.getElementById('inventory-panel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
 
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
@@ -231,7 +285,7 @@
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Đèn trần kiểu bản cũ (ô vuông sáng đơn giản + đèn PointLight chiếu sáng)
+                        // Đèn trần sáng đều, không cúp điện
                         const lightGeo = new THREE.PlaneGeometry(3, 3);
                         const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
                         const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
@@ -239,11 +293,9 @@
                         ceilingLight.position.set(posX, 4.98, posZ);
                         scene.add(ceilingLight);
 
-                        const pointLight = new THREE.PointLight(0xffffee, 0.7, 10);
+                        const pointLight = new THREE.PointLight(0xffffee, 0.8, 10);
                         pointLight.position.set(posX, 4.5, posZ);
                         scene.add(pointLight);
-
-                        ceilingLights.push({ mesh: ceilingLight, light: pointLight });
 
                         const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
@@ -302,7 +354,7 @@
         let isDragging = false;
         let prevX = 0;
         window.addEventListener('touchstart', (e) => {
-            if (e.target.id === 'sprint-btn' || e.target.closest('#joystick-base')) return;
+            if (e.target.closest('#sprint-btn') || e.target.closest('#flashlight-btn') || e.target.closest('#joystick-base') || e.target.closest('#inv-btn') || e.target.closest('#inventory-panel')) return;
             isDragging = true;
             prevX = e.touches[0].clientX;
         }, { passive: true });
@@ -358,9 +410,12 @@
         joystickBase.addEventListener('touchcancel', resetJoystick);
 
         let isSprinting = false;
+        let isFlashlightOn = false;
         let stamina = 100;
         const sprintBtn = document.getElementById('sprint-btn');
+        const flashlightBtn = document.getElementById('flashlight-btn');
         const staminaBar = document.getElementById('stamina-bar');
+        const sanityBar = document.getElementById('sanity-bar');
 
         sprintBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -373,9 +428,31 @@
             }
         });
 
+        flashlightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (batteryLevel > 0) {
+                isFlashlightOn = !isFlashlightOn;
+                flashlightBtn.classList.toggle('active', isFlashlightOn);
+                flashlight.intensity = isFlashlightOn ? 1.5 : 0;
+            }
+        });
+
         setInterval(() => {
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
+
+            if (sanity > 0) sanity -= 0.2;
+            sanityBar.style.width = sanity + '%';
+
+            if (isFlashlightOn && batteryLevel > 0) {
+                batteryLevel -= 1;
+                document.getElementById('battery-count').innerText = Math.max(0, batteryLevel);
+                if (batteryLevel <= 0) {
+                    isFlashlightOn = false;
+                    flashlight.intensity = 0;
+                    flashlightBtn.classList.remove('active');
+                }
+            }
         }, 1000);
 
         function showMsg(txt) {
@@ -431,15 +508,6 @@
                 }
             }
 
-            ceilingLights.forEach(item => {
-                if (Math.random() < 0.02) {
-                    const isOff = Math.random() < 0.4;
-                    item.mesh.material.opacity = isOff ? 0.2 : 1.0;
-                    item.mesh.material.transparent = true;
-                    item.light.intensity = isOff ? 0.1 : 0.7;
-                }
-            });
-
             almondWaters.forEach(w => {
                 if (!w.collected) {
                     w.mesh.rotation.y += 0.05;
@@ -447,24 +515,4 @@
                     if (dist < 3.5) {
                         w.collected = true;
                         scene.remove(w.mesh);
-                        waterCount++;
-                        survivalTime += 15;
-                        document.getElementById('water-count').innerText = waterCount;
-                        showMsg("Đã nhặt Nước Hạnh Nhân! (+15s)");
-                    }
-                }
-            });
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
-
+        
