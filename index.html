@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms - Safe Room & Lights</title>
+    <title>Backrooms 3D Fixed</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #b89728; font-family: Arial, sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
             position: absolute;
             top: 20px;
@@ -184,21 +184,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xb89728);
+        scene.background = new THREE.Color(0x111111);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xfffaed, 0.9);
+        // Thêm ánh sáng định hướng và ambient để tạo khối 3D rõ nét
+        const ambientLight = new THREE.AmbientLight(0xffeb3b, 0.7);
         scene.add(ambientLight);
 
-        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
-        const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xcdb14c });
-        const floorMat = new THREE.MeshBasicMaterial({ color: 0xdbcc76 });
-        const ceilingMat = new THREE.MeshBasicMaterial({ color: 0xe3d488 });
-        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee }); // Màu đèn huỳnh quang trên trần
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight.position.set(0, 10, 0);
+        scene.add(dirLight);
+
+        // Dùng MeshLambertMaterial để phản chiếu ánh sáng tạo khối 3D nổi khối tường, sàn, trần
+        const wallMaterial = new THREE.MeshLambertMaterial({ color: 0xd4a327 });
+        const pillarMaterial = new THREE.MeshLambertMaterial({ color: 0xb5891e });
+        const floorMat = new THREE.MeshLambertMaterial({ color: 0xa87c18 });
+        const ceilingMat = new THREE.MeshLambertMaterial({ color: 0xe6cc65 });
+        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Đèn sáng chói
         
         const tileSize = 10;
         const generatedChunks = new Set();
@@ -214,7 +220,7 @@
 
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x333333 });
             const bottle = new THREE.Mesh(geo, mat);
             bottle.position.set(posX, -4.4, posZ);
             scene.add(bottle);
@@ -246,32 +252,28 @@
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Thêm đèn huỳnh quang trên trần ở mỗi ô
+                        // Đèn huỳnh quang nổi trên trần
                         const lightGeo = new THREE.PlaneGeometry(3, 0.8);
                         const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
                         ceilingLight.rotation.x = Math.PI / 2;
                         ceilingLight.position.set(posX, 4.98, posZ);
                         scene.add(ceilingLight);
 
-                        // KHU VỰC PHÒNG NGHỈ NGƠI RỘNG RÃI (Safe Room ở gốc tọa độ 0,0 và vùng lân cận)
+                        // Phòng nghỉ rộng rãi ở giữa (Safe Room)
                         const isSafeRoomArea = (Math.abs(x) <= 2 && Math.abs(z) <= 2);
 
                         if (isSafeRoomArea) {
-                            // Phòng rộng lớn trống trải không có tường vướng víu để nghỉ ngơi thoải mái
                             if (Math.abs(x) === 2 || Math.abs(z) === 2) {
-                                // Chỉ tạo tường bao xung quanh khu vực phòng nghỉ rộng
                                 const wallGeo = new THREE.BoxGeometry(tileSize, 10, tileSize);
                                 const wall = new THREE.Mesh(wallGeo, wallMaterial);
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
                                 collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
                             } else if (x === 0 && z === 0) {
-                                // Đặt vài chai nước hạnh nhân hỗ trợ ngay tại giữa phòng nghỉ lớn
                                 createAlmondWater(posX + 2, posZ + 2);
                                 createAlmondWater(posX - 2, posZ - 2);
                             }
                         } else {
-                            // Mê cung thông thường bên ngoài
                             const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
                             if (isBigHallway) {
@@ -501,4 +503,9 @@
 
             almondWaters.forEach(w => {
                 if (!w.collected) {
-                    w.mesh.ro
+                    w.mesh.rotation.y += 0.05;
+                }
+            });
+
+            renderer.render(scene, camera);
+ 
