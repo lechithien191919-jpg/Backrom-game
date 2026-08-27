@@ -222,14 +222,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111111);
+        scene.background = new THREE.Color(0xd4ac0d); // Màu vàng đặc trưng Backrooms
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffeb3b, 0.8);
+        const ambientLight = new THREE.AmbientLight(0xffeb3b, 1.0);
         scene.add(ambientLight);
 
         const flashlight = new THREE.SpotLight(0xffffff, 0, 15, Math.PI / 4, 0.5, 1);
@@ -304,7 +304,7 @@
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        const pointLight = new THREE.PointLight(0xfffaaa, 1.0, 12);
+                        const pointLight = new THREE.PointLight(0xfffaaa, 1.2, 12);
                         pointLight.position.set(posX, 4.2, posZ);
                         scene.add(pointLight);
 
@@ -317,9 +317,7 @@
                                 pillar.position.set(posX, 0, posZ);
                                 scene.add(pillar);
 
-                                if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
-                                    collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
-                                }
+                                collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
 
                                 if (Math.random() < 0.3) {
                                     createAlmondWater(posX + 2, posZ + 2);
@@ -335,9 +333,7 @@
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
 
-                                if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
-                                    collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
-                                }
+                                collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
                             }
                         }
                     }
@@ -345,9 +341,10 @@
             }
         }
 
-        camera.position.set(0, 0, 0);
+        // Đặt camera ở vị trí thoáng, không bị kẹt trong tường
+        camera.position.set(0, 0, 5);
         let yaw = 0;
-        updateInfiniteBackrooms(0, 0);
+        updateInfiniteBackrooms(0, 5);
 
         function checkCollision(nextX, nextZ) {
             const playerRadius = 0.3;
@@ -517,4 +514,8 @@
                 if (!checkCollision(nextX, camera.position.z)) {
                     camera.position.x = nextX;
                 }
-                if (!checkCollision(camera.position.x,
+                if (!checkCollision(camera.position.x, nextZ)) {
+                    camera.position.z = nextZ;
+                }
+
+                updateInfiniteBackrooms(camera.position.x, came
