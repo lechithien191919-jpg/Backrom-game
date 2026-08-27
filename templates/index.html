@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Survival Extended</title>
+    <title>Backrooms Fixed Brightness</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #b89728; font-family: Arial, sans-serif; user-select: none; }
         #ui {
             position: absolute;
             top: 20px;
@@ -40,7 +40,6 @@
         }
         #sanity-bar { background: #00bcd4; }
 
-        /* Nút Inventory */
         #inv-btn {
             position: absolute;
             top: 20px;
@@ -71,7 +70,6 @@
         }
         #inventory-panel h3 { margin: 0 0 10px 0; font-size: 15px; color: #ffeb3b; border-bottom: 1px solid #444; padding-bottom: 5px; }
 
-        /* Nút Đèn Pin & Chạy */
         .control-btn {
             position: absolute;
             bottom: 60px;
@@ -138,7 +136,6 @@
             text-align: center;
         }
 
-        /* Hiệu ứng nhiễu màn hình Sanity */
         #glitch-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -154,7 +151,7 @@
             bottom: 10px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255,255,255,0.5);
+            color: rgba(255,255,255,0.7);
             font-size: 11px;
             pointer-events: none;
             z-index: 10;
@@ -232,10 +229,9 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xfffaaa, 0.9);
         scene.add(ambientLight);
 
-        // Đèn pin gắn theo camera
         const flashlight = new THREE.SpotLight(0xffffff, 0, 15, Math.PI / 4, 0.5, 1);
         flashlight.position.set(0, 0, 0);
         camera.add(flashlight);
@@ -268,7 +264,7 @@
 
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
             const bottle = new THREE.Mesh(geo, mat);
             bottle.position.set(posX, -4.4, posZ);
             scene.add(bottle);
@@ -316,7 +312,7 @@
                         ceilingLight.position.set(posX, 4.98, posZ);
                         scene.add(ceilingLight);
 
-                        const pointLight = new THREE.PointLight(0xffffee, 0.7, 10);
+                        const pointLight = new THREE.PointLight(0xffffee, 1.2, 12);
                         pointLight.position.set(posX, 4.5, posZ);
                         scene.add(pointLight);
 
@@ -467,8 +463,7 @@
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
             
-            // Giảm sanity dần theo thời gian
-            if (sanity > 0) sanity -= 0.5;
+            if (sanity > 0) sanity -= 0.3;
             sanityBar.style.width = sanity + '%';
 
             if (isFlashlightOn && batteryLevel > 0) {
@@ -514,6 +509,11 @@
             }
             staminaBar.style.width = stamina + '%';
 
-            // Hiệu ứng Sanity thấp (màn hình nhiễu)
             const glitchOverlay = document.getElementById('glitch-overlay');
-            if (sanit
+            if (sanity < 30) {
+                glitchOverlay.style.opacity = Math.random() < 0.3 ? '0.7' : '0.2';
+            } else {
+                glitchOverlay.style.opacity = '0';
+            }
+
+            if (moveVector.x !== 0 || moveVector.z !== 0) 
