@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Final Fix</title>
+    <title>Backrooms Working Movement & Lights</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -172,14 +172,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xb89728); // Màu nền tối hơn chút cho chuẩn
+        scene.background = new THREE.Color(0xb89728);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Giảm sáng môi trường xuống một chút cho u ám
         const ambientLight = new THREE.AmbientLight(0xd9c273, 0.6);
         scene.add(ambientLight);
 
@@ -232,23 +231,22 @@
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Đèn trần có viền xám xung quanh & phát sáng thực tế
-                        const frameGeo = new THREE.PlaneGeometry(3.4, 3.4);
-                        const frameMat = new THREE.MeshBasicMaterial({ color: 0x666666 });
+                        // Đèn trần: Viền khung xám mảnh xung quanh + bóng đèn phát sáng
+                        const frameGeo = new THREE.PlaneGeometry(2.4, 2.4);
+                        const frameMat = new THREE.MeshBasicMaterial({ color: 0x555555 });
                         const lightFrame = new THREE.Mesh(frameGeo, frameMat);
                         lightFrame.rotation.x = Math.PI / 2;
                         lightFrame.position.set(posX, 4.97, posZ);
                         scene.add(lightFrame);
 
-                        const lightGeo = new THREE.PlaneGeometry(3, 3);
+                        const lightGeo = new THREE.PlaneGeometry(2.0, 2.0);
                         const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
                         const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
                         ceilingLight.rotation.x = Math.PI / 2;
                         ceilingLight.position.set(posX, 4.98, posZ);
                         scene.add(ceilingLight);
 
-                        // Gắn nguồn sáng cho đèn
-                        const pointLight = new THREE.PointLight(0xffffee, 0.8, 12);
+                        const pointLight = new THREE.PointLight(0xffffee, 0.7, 10);
                         pointLight.position.set(posX, 4.5, posZ);
                         scene.add(pointLight);
 
@@ -263,7 +261,10 @@
                                 pillar.position.set(posX, 0, posZ);
                                 scene.add(pillar);
 
-                                collisionBoxes.push({ minX: posX - 1.8, maxX: posX + 1.8, minZ: posZ - 1.8, maxZ: posZ + 1.8 });
+                                // Chỉ thêm va chạm khi cách xa điểm xuất phát (0,0) để tránh kẹt lúc đầu game
+                                if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
+                                    collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
+                                }
 
                                 if (Math.random() < 0.4) {
                                     createAlmondWater(posX + 2, posZ + 2);
@@ -277,8 +278,9 @@
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
 
-                                // Thu nhỏ vùng va chạm tường chút xíu để tránh bị kẹt góc
-                                collisionBoxes.push({ minX: posX - 4.6, maxX: posX + 4.6, minZ: posZ - 4.6, maxZ: posZ + 4.6 });
+                                if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
+                                    collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
+                                }
                             }
                         }
                     }
@@ -291,7 +293,7 @@
         updateInfiniteBackrooms(0, 0);
 
         function checkCollision(nextX, nextZ) {
-            const playerRadius = 0.4; // Thu nhỏ bán kính va chạm giúp di chuyển mượt, không bị dính tường
+            const playerRadius = 0.3;
             for (let box of collisionBoxes) {
                 if (
                     nextX + playerRadius > box.minX &&
@@ -437,13 +439,12 @@
                 }
             }
 
-            // Đèn trần chớp chớp ngẫu nhiên và thay đổi độ sáng đèn thực tế
             ceilingLights.forEach(item => {
                 if (Math.random() < 0.02) {
                     const isOff = Math.random() < 0.4;
                     item.mesh.material.opacity = isOff ? 0.2 : 1.0;
                     item.mesh.material.transparent = true;
-                    item.light.intensity = isOff ? 0.1 : 0.8;
+                    item.light.intensity = isOff ? 0.1 : 0.7;
                 }
             });
 
