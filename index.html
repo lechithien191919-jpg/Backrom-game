@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms - 3D Fixed</title>
+    <title>Backrooms - 3D Perfect View</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #e3c456; font-family: Arial, sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #111; font-family: Arial, sans-serif; user-select: none; }
         #ui {
             position: absolute;
             top: 20px;
@@ -184,22 +184,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xe3c456);
+        scene.background = new THREE.Color(0x332200); // Nền tối phía xa tạo chiều sâu không gian
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        const ambientLight = new THREE.AmbientLight(0xffea80, 0.9);
         scene.add(ambientLight);
 
-        // Phối màu sắc phân biệt rõ các mảng 3D khối tường, cột, sàn, trần mà vẫn sáng rực chuẩn Backrooms
-        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xd4a327 }); // Tường vàng đậm vừa
-        const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xb8860b }); // Cột màu tối hơn tạo chiều sâu
-        const floorMat = new THREE.MeshBasicMaterial({ color: 0xc29b2e }); // Sàn nhà
-        const ceilingMat = new THREE.MeshBasicMaterial({ color: 0xf0d36c }); // Trần nhà sáng hơn
-        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Đèn huỳnh quang trắng chói
+        // Tạo vật liệu có đường viền khung (Wireframe edges) giúp phân biệt rõ từng khối 3D lập thể
+        const wallBaseMat = new THREE.MeshBasicMaterial({ color: 0xd4a327 });
+        const wireMat = new THREE.LineBasicMaterial({ color: 0x553300, linewidth: 2 });
+
+        function createCubeWithEdges(geo, material) {
+            const group = new THREE.Group();
+            const mesh = new THREE.Mesh(geo, material);
+            group.add(mesh);
+            
+            const wireGeo = new THREE.EdgesGeometry(geo);
+            const wireframe = new THREE.LineSegments(wireGeo, wireMat);
+            group.add(wireframe);
+            return group;
+        }
+
+        const pillarMat = new THREE.MeshBasicMaterial({ color: 0x996611 });
+        const floorMat = new THREE.MeshBasicMaterial({ color: 0xbf9029 });
+        const ceilingMat = new THREE.MeshBasicMaterial({ color: 0xffdf7e });
+        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         
         const tileSize = 10;
         const generatedChunks = new Set();
@@ -236,12 +249,18 @@
                         const posX = x * tileSize;
                         const posZ = z * tileSize;
 
+                        // Sàn nhà có lưới ô vuông 3D rõ nét
                         const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
                         const floor = new THREE.Mesh(floorGeo, floorMat);
                         floor.rotation.x = -Math.PI / 2;
                         floor.position.set(posX, -5, posZ);
                         scene.add(floor);
 
+                        const floorGrid = new THREE.GridHelper(tileSize, 5, 0x664400, 0x664400);
+                        floorGrid.position.set(posX, -4.98, posZ);
+                        scene.add(floorGrid);
+
+                        // Trần nhà
                         const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
                         ceiling.rotation.x = Math.PI / 2;
                         ceiling.position.set(posX, 5, posZ);
@@ -260,9 +279,9 @@
                         if (isSafeRoomArea) {
                             if (Math.abs(x) === 2 || Math.abs(z) === 2) {
                                 const wallGeo = new THREE.BoxGeometry(tileSize, 10, tileSize);
-                                const wall = new THREE.Mesh(wallGeo, wallMaterial);
-                                wall.position.set(posX, 0, posZ);
-                                scene.add(wall);
+                                const wallGroup = createCubeWithEdges(wallGeo, wallBaseMat);
+                                wallGroup.position.set(posX, 0, posZ);
+                                scene.add(wallGroup);
                                 collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
                             } else if (x === 0 && z === 0) {
                                 createAlmondWater(posX + 2, posZ + 2);
@@ -274,9 +293,9 @@
                             if (isBigHallway) {
                                 if (Math.abs(x % 3) === 0 && Math.abs(z % 3) === 0) {
                                     const pillarGeo = new THREE.BoxGeometry(4, 10, 4);
-                                    const pillar = new THREE.Mesh(pillarGeo, pillarMaterial);
-                                    pillar.position.set(posX, 0, posZ);
-                                    scene.add(pillar);
+                                    const pillarGroup = createCubeWithEdges(pillarGeo, pillarMat);
+                                    pillarGroup.position.set(posX, 0, posZ);
+                                    scene.add(pillarGroup);
 
                                     collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
 
@@ -288,9 +307,9 @@
                                 const mazePattern = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
                                 if (Math.floor(Math.abs(mazePattern) * 10) % 3 === 0) {
                                     const wallGeo = new THREE.BoxGeometry(tileSize, 10, tileSize);
-                                    const wall = new THREE.Mesh(wallGeo, wallMaterial);
-                                    wall.position.set(posX, 0, posZ);
-                                    scene.add(wall);
+                                    const wallGroup = createCubeWithEdges(wallGeo, wallBaseMat);
+                                    wallGroup.position.set(posX, 0, posZ);
+                                    scene.add(wallGroup);
 
                                     collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
                                 }
@@ -301,10 +320,11 @@
             }
         }
 
-        camera.position.set(0, 0, 0);
+        // Đặt vị trí xuất phát của camera lùi ra hẳn khu vực hành lang thoáng, không bị kẹt trong tường
+        camera.position.set(0, 0, 15);
         let yaw = 0;
         let pitch = 0;
-        updateInfiniteBackrooms(0, 0);
+        updateInfiniteBackrooms(0, 15);
 
         function checkCollision(nextX, nextZ) {
             const playerRadius = 0.3;
@@ -463,21 +483,12 @@
                 const nextX = camera.position.x + moveDir.x * currentSpeed;
                 const nextZ = camera.position.z + moveDir.z * currentSpeed;
 
-                const playerRadius = 0.3;
-                let canMoveX = true;
-                let canMoveZ = true;
-
-                for (let box of collisionBoxes) {
-                    if (nextX + playerRadius > box.minX && nextX - playerRadius < box.maxX && camera.position.z + playerRadius > box.minZ && camera.position.z - playerRadius < box.maxZ) {
-                        canMoveX = false;
-                    }
-                    if (camera.position.x + playerRadius > box.minX && camera.position.x - playerRadius < box.maxX && nextZ + playerRadius > box.minZ && nextZ - playerRadius < box.maxZ) {
-                        canMoveZ = false;
-                    }
+                if (!checkCollision(nextX, camera.position.z)) {
+                    camera.position.x = nextX;
                 }
-
-                if (canMoveX) camera.position.x = nextX;
-                if (canMoveZ) camera.position.z = nextZ;
+                if (!checkCollision(camera.position.x, nextZ)) {
+                    camera.position.z = nextZ;
+                }
 
                 updateInfiniteBackrooms(camera.position.x, camera.position.z);
             }
@@ -488,12 +499,4 @@
                 const intersects = raycaster.intersectObjects(activeBottles);
 
                 targetWater = null;
-                if (intersects.length > 0) {
-                    const hitObj = intersects[0].object;
-                    const dist = camera.position.distanceTo(hitObj.position);
-                    if (dist <= 4.5) {
-                        targetWater = almondWaters.find(w => w.mesh === hitObj);
-                    }
-                }
-            } else {
-        
+                if (intersects.length > 0
