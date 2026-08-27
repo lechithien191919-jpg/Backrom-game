@@ -11,7 +11,7 @@
             top: 20px;
             left: 20px;
             color: #ffeb3b;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             text-shadow: 2px 2px 4px #000;
             z-index: 10;
@@ -34,15 +34,38 @@
             background: #4caf50;
             transition: width 0.1s linear;
         }
-        #inventory {
+        
+        /* Nút mở túi đồ */
+        #inv-btn {
             position: absolute;
-            top: 80px;
-            left: 20px;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #fff;
             color: #fff;
-            font-size: 16px;
-            text-shadow: 1px 1px 2px #000;
-            z-index: 10;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 20;
+            cursor: pointer;
         }
+        #inventory-panel {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 2px solid #ffeb3b;
+            border-radius: 10px;
+            padding: 15px;
+            color: #fff;
+            width: 170px;
+            z-index: 20;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+        #inventory-panel h3 { margin: 0 0 10px 0; font-size: 15px; color: #ffeb3b; border-bottom: 1px solid #444; padding-bottom: 5px; }
+
         #message {
             position: absolute;
             top: 30%;
@@ -56,19 +79,34 @@
             opacity: 0;
             transition: opacity 0.5s;
             pointer-events: none;
+            text-align: center;
+        }
+
+        /* Tâm ngắm ở giữa màn hình */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            z-index: 15;
+            pointer-events: none;
         }
         
-        #sprint-btn {
+        .control-btn {
             position: absolute;
             bottom: 60px;
-            right: 40px;
-            width: 85px;
-            height: 85px;
+            width: 75px;
+            height: 75px;
             background: rgba(255, 235, 59, 0.2);
             border: 2px solid rgba(255, 235, 59, 0.8);
             border-radius: 50%;
             color: #ffeb3b;
-            font-size: 15px;
+            font-size: 13px;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -78,6 +116,11 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.4);
             transition: background 0.2s;
         }
+        #sprint-btn { right: 25px; }
+        /* Nút nhặt đồ nằm cạnh nút chạy */
+        #pickup-btn { right: 110px; opacity: 0.4; pointer-events: none; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: #888; }
+        #pickup-btn.active { opacity: 1; pointer-events: auto; background: rgba(0, 230, 118, 0.3); border-color: #00e676; color: #00e676; }
+        
         #sprint-btn.active {
             background: rgba(76, 175, 80, 0.7);
             border-color: #4caf50;
@@ -124,11 +167,19 @@
 <body>
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
     <div id="stamina-container"><div id="stamina-bar"></div></div>
-    <div id="inventory">💧 Nước hạnh nhân: <span id="water-count">0</span></div>
-    <div id="message">Đã nhặt Nước Hạnh Nhân! (+15s)</div>
-    <div id="hint">Vuốt màn hình ngang để xoay góc nhìn</div>
+    
+    <button id="inv-btn" onclick="toggleInventory()">📦 TÚI ĐỒ</button>
+    <div id="inventory-panel">
+        <h3>TÚI ĐỒ</h3>
+        <div>💧 Nước hạnh nhân: <span id="water-count">0</span></div>
+    </div>
 
-    <div id="sprint-btn">CHẠY</div>
+    <div id="crosshair"></div>
+    <div id="message">Đã nhặt Nước Hạnh Nhân! (+15s)</div>
+    <div id="hint">Vuốt màn hình để xoay hướng & nhìn lên xuống</div>
+
+    <div id="pickup-btn" class="control-btn">NHẶT</div>
+    <div id="sprint-btn" class="control-btn">CHẠY</div>
     <div id="joystick-base">
         <div id="joystick-knob"></div>
     </div>
@@ -195,6 +246,11 @@
         let waterCount = 0;
         let survivalTime = 0;
 
+        function toggleInventory() {
+            const panel = document.getElementById('inventory-panel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
             const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
@@ -218,20 +274,17 @@
                         const posX = x * tileSize;
                         const posZ = z * tileSize;
 
-                        // Sàn
                         const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
                         const floor = new THREE.Mesh(floorGeo, floorMat);
                         floor.rotation.x = -Math.PI / 2;
                         floor.position.set(posX, -5, posZ);
                         scene.add(floor);
 
-                        // Trần
                         const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
                         ceiling.rotation.x = Math.PI / 2;
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Đèn trần kiểu bản cũ (ô vuông sáng đơn giản + đèn PointLight chiếu sáng)
                         const lightGeo = new THREE.PlaneGeometry(3, 3);
                         const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
                         const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
@@ -282,6 +335,7 @@
 
         camera.position.set(0, 0, 0);
         let yaw = 0;
+        let pitch = 0;
         updateInfiniteBackrooms(0, 0);
 
         function checkCollision(nextX, nextZ) {
@@ -300,22 +354,30 @@
         }
 
         let isDragging = false;
-        let prevX = 0;
+        let prevX = 0, prevY = 0;
         window.addEventListener('touchstart', (e) => {
-            if (e.target.id === 'sprint-btn' || e.target.closest('#joystick-base')) return;
+            if (e.target.closest('#sprint-btn') || e.target.closest('#pickup-btn') || e.target.closest('#joystick-base') || e.target.closest('#inv-btn') || e.target.closest('#inventory-panel')) return;
             isDragging = true;
             prevX = e.touches[0].clientX;
+            prevY = e.touches[0].clientY;
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             for (let i = 0; i < e.touches.length; i++) {
-                if (e.touches[i].clientX > window.innerWidth * 0.3 || isDragging) {
-                    const currentX = e.touches[i].clientX;
-                    yaw -= (currentX - prevX) * 0.004;
-                    prevX = currentX;
-                    break;
-                }
+                const currentX = e.touches[i].clientX;
+                const currentY = e.touches[i].clientY;
+                yaw -= (currentX - prevX) * 0.004;
+                pitch -= (currentY - prevY) * 0.004;
+                
+                // Giới hạn góc nhìn lên xuống không bị lộn vòng đầu
+                const maxPitch = Math.PI / 2.2;
+                if (pitch > maxPitch) pitch = maxPitch;
+                if (pitch < -maxPitch) pitch = -maxPitch;
+
+                prevX = currentX;
+                prevY = currentY;
+                break;
             }
         }, { passive: true });
 
@@ -360,6 +422,7 @@
         let isSprinting = false;
         let stamina = 100;
         const sprintBtn = document.getElementById('sprint-btn');
+        const pickupBtn = document.getElementById('pickup-btn');
         const staminaBar = document.getElementById('stamina-bar');
 
         sprintBtn.addEventListener('touchstart', (e) => {
@@ -370,6 +433,21 @@
             } else {
                 isSprinting = false;
                 sprintBtn.classList.remove('active');
+            }
+        });
+
+        let targetWater = null;
+        pickupBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (targetWater && !targetWater.collected) {
+                targetWater.collected = true;
+                scene.remove(targetWater.mesh);
+                waterCount++;
+                survivalTime += 15;
+                document.getElementById('water-count').innerText = waterCount;
+                showMsg("Đã nhặt Nước Hạnh Nhân! (+15s)");
+                targetWater = null;
+                pickupBtn.classList.remove('active');
             }
         });
 
@@ -389,10 +467,16 @@
         const normalSpeed = 0.1;
         const sprintSpeed = 0.22;
 
+        const raycaster = new THREE.Raycaster();
+        const centerVector = new THREE.Vector2(0, 0);
+
         function animate() {
             requestAnimationFrame(animate);
 
-            camera.rotation.set(0, yaw, 0);
+            // Cập nhật góc quay camera cả ngang (yaw) và dọc (pitch)
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = yaw;
+            camera.rotation.x = pitch;
 
             let currentSpeed = normalSpeed;
             if (isSprinting && (moveVector.x !== 0 || moveVector.z !== 0)) {
@@ -433,39 +517,4 @@
 
             ceilingLights.forEach(item => {
                 if (Math.random() < 0.02) {
-                    const isOff = Math.random() < 0.4;
-                    item.mesh.material.opacity = isOff ? 0.2 : 1.0;
-                    item.mesh.material.transparent = true;
-                    item.light.intensity = isOff ? 0.1 : 0.7;
-                }
-            });
-
-            almondWaters.forEach(w => {
-                if (!w.collected) {
-                    w.mesh.rotation.y += 0.05;
-                    const dist = camera.position.distanceTo(w.mesh.position);
-                    if (dist < 3.5) {
-                        w.collected = true;
-                        scene.remove(w.mesh);
-                        waterCount++;
-                        survivalTime += 15;
-                        document.getElementById('water-count').innerText = waterCount;
-                        showMsg("Đã nhặt Nước Hạnh Nhân! (+15s)");
-                    }
-                }
-            });
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
-
-
+          
