@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Fixed Movement</title>
+    <title>Backrooms Survival</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -229,7 +229,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffeb3b, 0.7);
+        const ambientLight = new THREE.AmbientLight(0xffeb3b, 0.8);
         scene.add(ambientLight);
 
         const flashlight = new THREE.SpotLight(0xffffff, 0, 15, Math.PI / 4, 0.5, 1);
@@ -248,7 +248,6 @@
         const generatedChunks = new Set();
         const almondWaters = [];
         const exitDoors = [];
-        const ceilingLights = [];
         const collisionBoxes = [];
         let waterCount = 0;
         let batteryLevel = 100;
@@ -308,7 +307,6 @@
                         const pointLight = new THREE.PointLight(0xfffaaa, 1.0, 12);
                         pointLight.position.set(posX, 4.2, posZ);
                         scene.add(pointLight);
-                        ceilingLights.push(pointLight);
 
                         const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
@@ -366,7 +364,6 @@
             return false;
         }
 
-        // Xoay camera bằng vuốt màn hình
         let isDragging = false;
         let prevX = 0;
         window.addEventListener('touchstart', (e) => {
@@ -387,7 +384,6 @@
 
         window.addEventListener('touchend', () => { isDragging = false; });
 
-        // Joystick điều khiển di chuyển mượt mà
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
         let moveVector = { x: 0, z: 0 };
@@ -516,4 +512,9 @@
                 moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
                 const nextX = camera.position.x + moveDir.x * currentSpeed;
-                const nextZ = camera.position.z + moveDir.z * currentSpeed
+                const nextZ = camera.position.z + moveDir.z * currentSpeed;
+
+                if (!checkCollision(nextX, camera.position.z)) {
+                    camera.position.x = nextX;
+                }
+                if (!checkCollision(camera.position.x,
