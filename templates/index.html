@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Collision & Features</title>
+    <title>Backrooms Final Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -58,7 +58,6 @@
             pointer-events: none;
         }
         
-        /* Nút Chạy (Bật/Tắt) */
         #sprint-btn {
             position: absolute;
             bottom: 60px;
@@ -85,7 +84,6 @@
             color: #fff;
         }
 
-        /* Joystick ảo di chuyển */
         #joystick-base {
             position: absolute;
             bottom: 40px;
@@ -130,13 +128,11 @@
     <div id="message">Đã nhặt Nước Hạnh Nhân! (+15s)</div>
     <div id="hint">Vuốt màn hình ngang để xoay góc nhìn</div>
 
-    <!-- Nút chạy & Joystick -->
     <div id="sprint-btn">CHẠY</div>
     <div id="joystick-base">
         <div id="joystick-knob"></div>
     </div>
 
-    <!-- Web Audio API Âm thanh -->
     <script>
         let audioCtx = null;
         function initAudio() {
@@ -176,14 +172,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd4af37);
+        scene.background = new THREE.Color(0xb89728); // Màu nền tối hơn chút cho chuẩn
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xfffff0, 1.0);
+        // Giảm sáng môi trường xuống một chút cho u ám
+        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.6);
         scene.add(ambientLight);
 
         const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
@@ -195,7 +192,7 @@
         const generatedChunks = new Set();
         const almondWaters = [];
         const ceilingLights = [];
-        const collisionBoxes = []; // Mảng lưu các khối va chạm (tường và cột)
+        const collisionBoxes = [];
         let waterCount = 0;
         let survivalTime = 0;
 
@@ -208,7 +205,6 @@
             almondWaters.push({ mesh: bottle, x: posX, z: posZ, collected: false });
         }
 
-        // Sinh bản đồ và tạo vùng va chạm cho tường/cột
         function updateInfiniteBackrooms(playerX, playerZ) {
             const renderDistance = 4;
             const pChunkX = Math.floor(playerX / tileSize);
@@ -236,14 +232,27 @@
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        // Đèn trần chớp chớp
+                        // Đèn trần có viền xám xung quanh & phát sáng thực tế
+                        const frameGeo = new THREE.PlaneGeometry(3.4, 3.4);
+                        const frameMat = new THREE.MeshBasicMaterial({ color: 0x666666 });
+                        const lightFrame = new THREE.Mesh(frameGeo, frameMat);
+                        lightFrame.rotation.x = Math.PI / 2;
+                        lightFrame.position.set(posX, 4.97, posZ);
+                        scene.add(lightFrame);
+
                         const lightGeo = new THREE.PlaneGeometry(3, 3);
                         const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
                         const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
                         ceilingLight.rotation.x = Math.PI / 2;
                         ceilingLight.position.set(posX, 4.98, posZ);
                         scene.add(ceilingLight);
-                        ceilingLights.push(ceilingLight);
+
+                        // Gắn nguồn sáng cho đèn
+                        const pointLight = new THREE.PointLight(0xffffee, 0.8, 12);
+                        pointLight.position.set(posX, 4.5, posZ);
+                        scene.add(pointLight);
+
+                        ceilingLights.push({ mesh: ceilingLight, light: pointLight });
 
                         const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
@@ -254,8 +263,7 @@
                                 pillar.position.set(posX, 0, posZ);
                                 scene.add(pillar);
 
-                                // Thêm vào danh sách va chạm cột trụ
-                                collisionBoxes.push({ x: posX, z: posX ? posX : posX, minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
+                                collisionBoxes.push({ minX: posX - 1.8, maxX: posX + 1.8, minZ: posZ - 1.8, maxZ: posZ + 1.8 });
 
                                 if (Math.random() < 0.4) {
                                     createAlmondWater(posX + 2, posZ + 2);
@@ -269,8 +277,8 @@
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
 
-                                // Thêm vào danh sách va chạm tường
-                                collisionBoxes.push({ minX: posX - tileSize/2, maxX: posX + tileSize/2, minZ: posZ - tileSize/2, maxZ: posZ + tileSize/2 });
+                                // Thu nhỏ vùng va chạm tường chút xíu để tránh bị kẹt góc
+                                collisionBoxes.push({ minX: posX - 4.6, maxX: posX + 4.6, minZ: posZ - 4.6, maxZ: posZ + 4.6 });
                             }
                         }
                     }
@@ -282,9 +290,8 @@
         let yaw = 0;
         updateInfiniteBackrooms(0, 0);
 
-        // Kiểm tra va chạm hộp (AABB Collision)
         function checkCollision(nextX, nextZ) {
-            const playerRadius = 0.6; // Bán kính thân người chơi
+            const playerRadius = 0.4; // Thu nhỏ bán kính va chạm giúp di chuyển mượt, không bị dính tường
             for (let box of collisionBoxes) {
                 if (
                     nextX + playerRadius > box.minX &&
@@ -292,13 +299,12 @@
                     nextZ + playerRadius > box.minZ &&
                     nextZ - playerRadius < box.maxZ
                 ) {
-                    return true; // Có va chạm
+                    return true;
                 }
             }
-            return false; // Không va chạm
+            return false;
         }
 
-        // Xử lý vuốt màn hình mượt mà
         let isDragging = false;
         let prevX = 0;
         window.addEventListener('touchstart', (e) => {
@@ -321,7 +327,6 @@
 
         window.addEventListener('touchend', () => { isDragging = false; });
 
-        // Joystick điều khiển
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
         let moveVector = { x: 0, z: 0 };
@@ -358,7 +363,6 @@
         joystickBase.addEventListener('touchend', resetJoystick);
         joystickBase.addEventListener('touchcancel', resetJoystick);
 
-        // Nút Chạy (Bật/Tắt)
         let isSprinting = false;
         let stamina = 100;
         const sprintBtn = document.getElementById('sprint-btn');
@@ -410,7 +414,6 @@
             }
             staminaBar.style.width = stamina + '%';
 
-            // Di chuyển có kiểm tra va chạm tường/cột
             if (moveVector.x !== 0 || moveVector.z !== 0) {
                 const moveDir = new THREE.Vector3(moveVector.x, 0, moveVector.z);
                 moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
@@ -418,7 +421,6 @@
                 const nextX = camera.position.x + moveDir.x * currentSpeed;
                 const nextZ = camera.position.z + moveDir.z * currentSpeed;
 
-                // Kiểm tra va chạm từng trục để trượt tường mượt mà
                 if (!checkCollision(nextX, camera.position.z)) {
                     camera.position.x = nextX;
                 }
@@ -435,19 +437,16 @@
                 }
             }
 
-            // Đèn trần chớp chớp
-            ceilingLights.forEach(light => {
+            // Đèn trần chớp chớp ngẫu nhiên và thay đổi độ sáng đèn thực tế
+            ceilingLights.forEach(item => {
                 if (Math.random() < 0.02) {
-                    light.material.opacity = Math.random() < 0.4 ? 0.2 : 1.0;
-                    light.material.transparent = true;
+                    const isOff = Math.random() < 0.4;
+                    item.mesh.material.opacity = isOff ? 0.2 : 1.0;
+                    item.mesh.material.transparent = true;
+                    item.light.intensity = isOff ? 0.1 : 0.8;
                 }
             });
 
-            if (Math.random() < 0.03) {
-                ambientLight.intensity = Math.random() < 0.3 ? 0.3 : 1.0;
-            }
-
-            // Nhặt nước hạnh nhân
             almondWaters.forEach(w => {
                 if (!w.collected) {
                     w.mesh.rotation.y += 0.05;
