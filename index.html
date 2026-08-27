@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Backrooms Final Version</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #b89728; font-family: Arial, sans-serif; user-select: none; }
         #ui {
             position: absolute;
             top: 20px;
@@ -35,7 +35,6 @@
             transition: width 0.1s linear;
         }
         
-        /* Nút mở túi đồ */
         #inv-btn {
             position: absolute;
             top: 20px;
@@ -82,7 +81,6 @@
             text-align: center;
         }
 
-        /* Tâm ngắm ở giữa màn hình */
         #crosshair {
             position: absolute;
             top: 50%;
@@ -90,7 +88,7 @@
             transform: translate(-50%, -50%);
             width: 10px;
             height: 10px;
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.8);
             border: 2px solid rgba(0, 0, 0, 0.5);
             border-radius: 50%;
             z-index: 15;
@@ -117,7 +115,6 @@
             transition: background 0.2s;
         }
         #sprint-btn { right: 25px; }
-        /* Nút nhặt đồ nằm cạnh nút chạy */
         #pickup-btn { right: 110px; opacity: 0.4; pointer-events: none; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: #888; }
         #pickup-btn.active { opacity: 1; pointer-events: auto; background: rgba(0, 230, 118, 0.3); border-color: #00e676; color: #00e676; }
         
@@ -184,53 +181,17 @@
         <div id="joystick-knob"></div>
     </div>
 
-    <script>
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                playAmbientHum();
-            }
-        }
-        function playAmbientHum() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-        }
-        function playFootstep() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
-        }
-        window.addEventListener('touchstart', initAudio, { once: true });
-    </script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xb89728);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.8);
         scene.add(ambientLight);
 
         const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
@@ -241,7 +202,6 @@
         const tileSize = 10;
         const generatedChunks = new Set();
         const almondWaters = [];
-        const ceilingLights = [];
         const collisionBoxes = [];
         let waterCount = 0;
         let survivalTime = 0;
@@ -253,7 +213,7 @@
 
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const bottle = new THREE.Mesh(geo, mat);
             bottle.position.set(posX, -4.4, posZ);
             scene.add(bottle);
@@ -261,7 +221,7 @@
         }
 
         function updateInfiniteBackrooms(playerX, playerZ) {
-            const renderDistance = 4;
+            const renderDistance = 3;
             const pChunkX = Math.floor(playerX / tileSize);
             const pChunkZ = Math.floor(playerZ / tileSize);
 
@@ -284,19 +244,6 @@
                         ceiling.rotation.x = Math.PI / 2;
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
-
-                        const lightGeo = new THREE.PlaneGeometry(3, 3);
-                        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
-                        const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
-                        ceilingLight.rotation.x = Math.PI / 2;
-                        ceilingLight.position.set(posX, 4.98, posZ);
-                        scene.add(ceilingLight);
-
-                        const pointLight = new THREE.PointLight(0xffffee, 0.7, 10);
-                        pointLight.position.set(posX, 4.5, posZ);
-                        scene.add(pointLight);
-
-                        ceilingLights.push({ mesh: ceilingLight, light: pointLight });
 
                         const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
@@ -370,7 +317,6 @@
                 yaw -= (currentX - prevX) * 0.004;
                 pitch -= (currentY - prevY) * 0.004;
                 
-                // Giới hạn góc nhìn lên xuống không bị lộn vòng đầu
                 const maxPitch = Math.PI / 2.2;
                 if (pitch > maxPitch) pitch = maxPitch;
                 if (pitch < -maxPitch) pitch = -maxPitch;
@@ -463,17 +409,14 @@
             setTimeout(() => { m.style.opacity = '0'; }, 1500);
         }
 
-        let stepTimer = 0;
         const normalSpeed = 0.1;
         const sprintSpeed = 0.22;
-
         const raycaster = new THREE.Raycaster();
         const centerVector = new THREE.Vector2(0, 0);
 
         function animate() {
             requestAnimationFrame(animate);
 
-            // Cập nhật góc quay camera cả ngang (yaw) và dọc (pitch)
             camera.rotation.order = 'YXZ';
             camera.rotation.y = yaw;
             camera.rotation.x = pitch;
@@ -507,14 +450,47 @@
                 }
 
                 updateInfiniteBackrooms(camera.position.x, camera.position.z);
-
-                stepTimer += currentSpeed;
-                if (stepTimer > 1.2) {
-                    playFootstep();
-                    stepTimer = 0;
-                }
             }
 
-            ceilingLights.forEach(item => {
-                if (Math.random() < 0.02) {
-          
+            const activeBottles = almondWaters.filter(w => !w.collected).map(w => w.mesh);
+            if (activeBottles.length > 0) {
+                raycaster.setFromCamera(centerVector, camera);
+                const intersects = raycaster.intersectObjects(activeBottles);
+
+                targetWater = null;
+                if (intersects.length > 0) {
+                    const hitObj = intersects[0].object;
+                    const dist = camera.position.distanceTo(hitObj.position);
+                    if (dist <= 4.5) {
+                        targetWater = almondWaters.find(w => w.mesh === hitObj);
+                    }
+                }
+            } else {
+                targetWater = null;
+            }
+
+            if (targetWater) {
+                pickupBtn.classList.add('active');
+            } else {
+                pickupBtn.classList.remove('active');
+            }
+
+            almondWaters.forEach(w => {
+                if (!w.collected) {
+                    w.mesh.rotation.y += 0.05;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+
