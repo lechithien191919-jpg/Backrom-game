@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Backrooms Survival</title>
+    <title>Backrooms Final Version</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; user-select: none; }
         #ui {
@@ -11,75 +11,64 @@
             top: 20px;
             left: 20px;
             color: #ffeb3b;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             text-shadow: 2px 2px 4px #000;
             z-index: 10;
         }
-        #bars-container {
+        #stamina-container {
             position: absolute;
-            top: 50px;
+            top: 55px;
             left: 20px;
             width: 150px;
-            z-index: 10;
-        }
-        .bar-box {
-            width: 100%;
-            height: 10px;
-            background: rgba(0,0,0,0.6);
+            height: 12px;
+            background: rgba(0,0,0,0.5);
             border: 2px solid #ffeb3b;
-            border-radius: 5px;
-            margin-bottom: 5px;
+            border-radius: 6px;
+            z-index: 10;
             overflow: hidden;
         }
-        .bar-fill {
+        #stamina-bar {
             width: 100%;
             height: 100%;
             background: #4caf50;
             transition: width 0.1s linear;
         }
-        #sanity-bar { background: #00bcd4; }
-
-        #inv-btn {
+        #inventory {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #fff;
+            top: 80px;
+            left: 20px;
             color: #fff;
-            padding: 8px 14px;
-            border-radius: 8px;
+            font-size: 16px;
+            text-shadow: 1px 1px 2px #000;
+            z-index: 10;
+        }
+        #message {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00e676;
+            font-size: 20px;
             font-weight: bold;
-            font-size: 14px;
+            text-shadow: 2px 2px 4px #000;
             z-index: 20;
-            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
         }
-        #inventory-panel {
-            position: absolute;
-            top: 70px;
-            right: 20px;
-            background: rgba(20, 20, 20, 0.9);
-            border: 2px solid #ffeb3b;
-            border-radius: 10px;
-            padding: 15px;
-            color: #fff;
-            width: 180px;
-            z-index: 20;
-            display: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
-        }
-        #inventory-panel h3 { margin: 0 0 10px 0; font-size: 15px; color: #ffeb3b; border-bottom: 1px solid #444; padding-bottom: 5px; }
-
-        .control-btn {
+        
+        #sprint-btn {
             position: absolute;
             bottom: 60px;
-            width: 75px;
-            height: 75px;
+            right: 40px;
+            width: 85px;
+            height: 85px;
             background: rgba(255, 235, 59, 0.2);
             border: 2px solid rgba(255, 235, 59, 0.8);
             border-radius: 50%;
             color: #ffeb3b;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -87,10 +76,9 @@
             z-index: 10;
             touch-action: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: background 0.2s;
         }
-        #sprint-btn { right: 30px; }
-        #flashlight-btn { right: 115px; }
-        .control-btn.active {
+        #sprint-btn.active {
             background: rgba(76, 175, 80, 0.7);
             border-color: #4caf50;
             color: #fff;
@@ -114,45 +102,19 @@
             left: 40px;
             width: 50px;
             height: 50px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             pointer-events: none;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
 
-        #message {
-            position: absolute;
-            top: 25%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #00e676;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px #000;
-            z-index: 30;
-            opacity: 0;
-            transition: opacity 0.5s;
-            pointer-events: none;
-            text-align: center;
-        }
-
-        #glitch-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 15;
-            opacity: 0;
-            background: radial-gradient(circle, transparent 50%, rgba(255,0,0,0.2) 100%);
-            transition: opacity 0.3s;
-        }
-
         #hint {
             position: absolute;
-            bottom: 10px;
+            bottom: 15px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255,255,255,0.7);
-            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
             pointer-events: none;
             z-index: 10;
             text-shadow: 1px 1px 2px #000;
@@ -161,24 +123,12 @@
 </head>
 <body>
     <div id="ui">BACKROOMS - Sống sót: <span id="score">0</span>s</div>
-    <div id="bars-container">
-        <div class="bar-box" title="Thể lực"><div id="stamina-bar" class="bar-fill"></div></div>
-        <div class="bar-box" title="Độ tỉnh táo"><div id="sanity-bar" class="bar-fill"></div></div>
-    </div>
-
-    <button id="inv-btn" onclick="toggleInventory()">📦 TÚI ĐỒ</button>
-    <div id="inventory-panel">
-        <h3>TÚI ĐỒ SINH TỒN</h3>
-        <div>💧 Nước hạnh nhân: <span id="water-count">0</span></div>
-        <div style="margin-top: 8px;">🔋 Pin đèn pin: <span id="battery-count">100</span>%</div>
-    </div>
-
-    <div id="message"></div>
-    <div id="glitch-overlay"></div>
+    <div id="stamina-container"><div id="stamina-bar"></div></div>
+    <div id="inventory">💧 Nước hạnh nhân: <span id="water-count">0</span></div>
+    <div id="message">Đã nhặt Nước Hạnh Nhân! (+15s)</div>
     <div id="hint">Vuốt màn hình ngang để xoay góc nhìn</div>
 
-    <div id="flashlight-btn" class="control-btn">ĐÈN PIN</div>
-    <div id="sprint-btn" class="control-btn">CHẠY</div>
+    <div id="sprint-btn">CHẠY</div>
     <div id="joystick-base">
         <div id="joystick-knob"></div>
     </div>
@@ -196,7 +146,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(55, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(60, audioCtx.currentTime);
             gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
@@ -207,9 +157,9 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(110, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(35, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
@@ -222,91 +172,78 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xd4ac0d); // Màu vàng đặc trưng Backrooms
+        scene.background = new THREE.Color(0xb89728);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffeb3b, 1.0);
+        const ambientLight = new THREE.AmbientLight(0xd9c273, 0.6);
         scene.add(ambientLight);
 
-        const flashlight = new THREE.SpotLight(0xffffff, 0, 15, Math.PI / 4, 0.5, 1);
-        flashlight.position.set(0, 0, 0);
-        camera.add(flashlight);
-        flashlight.target.position.set(0, 0, -5);
-        camera.add(flashlight.target);
-        scene.add(camera);
-
-        const wallMaterial = new THREE.MeshLambertMaterial({ color: 0xd4ac0d });
-        const pillarMaterial = new THREE.MeshLambertMaterial({ color: 0xb7950b });
-        const floorMat = new THREE.MeshLambertMaterial({ color: 0xf1c40f });
-        const ceilingMat = new THREE.MeshLambertMaterial({ color: 0xf4d03f });
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xc49d3a });
+        const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0xcdb14c });
+        const floorMat = new THREE.MeshBasicMaterial({ color: 0xdbcc76 });
+        const ceilingMat = new THREE.MeshBasicMaterial({ color: 0xe3d488 });
         
         const tileSize = 10;
         const generatedChunks = new Set();
         const almondWaters = [];
-        const exitDoors = [];
+        const ceilingLights = [];
         const collisionBoxes = [];
         let waterCount = 0;
-        let batteryLevel = 100;
         let survivalTime = 0;
-        let stamina = 100;
-        let sanity = 100;
-        let currentLevel = 0;
-
-        function toggleInventory() {
-            const panel = document.getElementById('inventory-panel');
-            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-        }
 
         function createAlmondWater(posX, posZ) {
             const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 8);
-            const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
             const bottle = new THREE.Mesh(geo, mat);
             bottle.position.set(posX, -4.4, posZ);
             scene.add(bottle);
-            almondWaters.push({ mesh: bottle, collected: false });
-        }
-
-        function createExitDoor(posX, posZ) {
-            const geo = new THREE.BoxGeometry(3, 7, 0.4);
-            const mat = new THREE.MeshLambertMaterial({ color: 0x222222 });
-            const door = new THREE.Mesh(geo, mat);
-            door.position.set(posX, -1.5, posZ);
-            scene.add(door);
-            exitDoors.push({ mesh: door, x: posX, z: posZ });
+            almondWaters.push({ mesh: bottle, x: posX, z: posZ, collected: false });
         }
 
         function updateInfiniteBackrooms(playerX, playerZ) {
-            const renderDistance = 3;
+            const renderDistance = 4;
             const pChunkX = Math.floor(playerX / tileSize);
             const pChunkZ = Math.floor(playerZ / tileSize);
 
             for (let x = pChunkX - renderDistance; x <= pChunkX + renderDistance; x++) {
                 for (let z = pChunkZ - renderDistance; z <= pChunkZ + renderDistance; z++) {
-                    const chunkKey = `${currentLevel}_${x},${z}`;
+                    const chunkKey = `${x},${z}`;
                     if (!generatedChunks.has(chunkKey)) {
                         generatedChunks.add(chunkKey);
 
                         const posX = x * tileSize;
                         const posZ = z * tileSize;
 
+                        // Sàn
                         const floorGeo = new THREE.PlaneGeometry(tileSize, tileSize);
                         const floor = new THREE.Mesh(floorGeo, floorMat);
                         floor.rotation.x = -Math.PI / 2;
                         floor.position.set(posX, -5, posZ);
                         scene.add(floor);
 
+                        // Trần
                         const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
                         ceiling.rotation.x = Math.PI / 2;
                         ceiling.position.set(posX, 5, posZ);
                         scene.add(ceiling);
 
-                        const pointLight = new THREE.PointLight(0xfffaaa, 1.2, 12);
-                        pointLight.position.set(posX, 4.2, posZ);
+                        // Đèn trần kiểu bản cũ (ô vuông sáng đơn giản + đèn PointLight chiếu sáng)
+                        const lightGeo = new THREE.PlaneGeometry(3, 3);
+                        const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+                        const ceilingLight = new THREE.Mesh(lightGeo, lightMat);
+                        ceilingLight.rotation.x = Math.PI / 2;
+                        ceilingLight.position.set(posX, 4.98, posZ);
+                        scene.add(ceilingLight);
+
+                        const pointLight = new THREE.PointLight(0xffffee, 0.7, 10);
+                        pointLight.position.set(posX, 4.5, posZ);
                         scene.add(pointLight);
+
+                        ceilingLights.push({ mesh: ceilingLight, light: pointLight });
 
                         const isBigHallway = (Math.abs(x % 10) < 3 && Math.abs(z % 10) < 3);
 
@@ -317,12 +254,12 @@
                                 pillar.position.set(posX, 0, posZ);
                                 scene.add(pillar);
 
-                                collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
+                                if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
+                                    collisionBoxes.push({ minX: posX - 2, maxX: posX + 2, minZ: posZ - 2, maxZ: posZ + 2 });
+                                }
 
-                                if (Math.random() < 0.3) {
+                                if (Math.random() < 0.4) {
                                     createAlmondWater(posX + 2, posZ + 2);
-                                } else if (Math.random() < 0.05 && currentLevel === 0) {
-                                    createExitDoor(posX, posZ);
                                 }
                             }
                         } else {
@@ -333,7 +270,9 @@
                                 wall.position.set(posX, 0, posZ);
                                 scene.add(wall);
 
-                                collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
+                                if (Math.abs(posX) > 3 || Math.abs(posZ) > 3) {
+                                    collisionBoxes.push({ minX: posX - 4.5, maxX: posX + 4.5, minZ: posZ - 4.5, maxZ: posZ + 4.5 });
+                                }
                             }
                         }
                     }
@@ -341,10 +280,9 @@
             }
         }
 
-        // Đặt camera ở vị trí thoáng, không bị kẹt trong tường
-        camera.position.set(0, 0, 5);
+        camera.position.set(0, 0, 0);
         let yaw = 0;
-        updateInfiniteBackrooms(0, 5);
+        updateInfiniteBackrooms(0, 0);
 
         function checkCollision(nextX, nextZ) {
             const playerRadius = 0.3;
@@ -364,7 +302,7 @@
         let isDragging = false;
         let prevX = 0;
         window.addEventListener('touchstart', (e) => {
-            if (e.target.closest('#sprint-btn') || e.target.closest('#flashlight-btn') || e.target.closest('#joystick-base') || e.target.closest('#inv-btn') || e.target.closest('#inventory-panel')) return;
+            if (e.target.id === 'sprint-btn' || e.target.closest('#joystick-base')) return;
             isDragging = true;
             prevX = e.touches[0].clientX;
         }, { passive: true });
@@ -372,10 +310,12 @@
         window.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             for (let i = 0; i < e.touches.length; i++) {
-                const currentX = e.touches[i].clientX;
-                yaw -= (currentX - prevX) * 0.004;
-                prevX = currentX;
-                break;
+                if (e.touches[i].clientX > window.innerWidth * 0.3 || isDragging) {
+                    const currentX = e.touches[i].clientX;
+                    yaw -= (currentX - prevX) * 0.004;
+                    prevX = currentX;
+                    break;
+                }
             }
         }, { passive: true });
 
@@ -384,50 +324,43 @@
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
         let moveVector = { x: 0, z: 0 };
-        let activeTouchId = null;
+        let joystickTouchId = null;
 
         joystickBase.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const touch = e.changedTouches[0];
-            activeTouchId = touch.identifier;
-        }, { passive: false });
+            joystickTouchId = e.changedTouches[0].identifier;
+        });
 
         joystickBase.addEventListener('touchmove', (e) => {
             e.preventDefault();
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                if (touch.identifier === activeTouchId) {
+                if (touch.identifier === joystickTouchId) {
                     const rect = joystickBase.getBoundingClientRect();
                     let dx = touch.clientX - (rect.left + rect.width / 2);
                     let dy = touch.clientY - (rect.top + rect.height / 2);
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const maxR = 45;
-                    if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+                    if (dist > maxR) { dx = (dx/dist)*maxR; dy = (dy/dist)*maxR; }
                     joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
                     moveVector.x = dx / maxR;
                     moveVector.z = dy / maxR;
                 }
             }
-        }, { passive: false });
+        });
 
-        const resetJoystick = (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === activeTouchId) {
-                    activeTouchId = null;
-                    joystickKnob.style.transform = `translate(0px, 0px)`;
-                    moveVector = { x: 0, z: 0 };
-                }
-            }
+        const resetJoystick = () => {
+            joystickTouchId = null;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+            moveVector = { x: 0, z: 0 };
         };
         joystickBase.addEventListener('touchend', resetJoystick);
         joystickBase.addEventListener('touchcancel', resetJoystick);
 
         let isSprinting = false;
-        let isFlashlightOn = false;
+        let stamina = 100;
         const sprintBtn = document.getElementById('sprint-btn');
-        const flashlightBtn = document.getElementById('flashlight-btn');
         const staminaBar = document.getElementById('stamina-bar');
-        const sanityBar = document.getElementById('sanity-bar');
 
         sprintBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -440,43 +373,21 @@
             }
         });
 
-        flashlightBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (batteryLevel > 0) {
-                isFlashlightOn = !isFlashlightOn;
-                flashlightBtn.classList.toggle('active', isFlashlightOn);
-                flashlight.intensity = isFlashlightOn ? 1.5 : 0;
-            }
-        });
-
         setInterval(() => {
             survivalTime++;
             document.getElementById('score').innerText = survivalTime;
-            
-            if (sanity > 0) sanity -= 0.3;
-            sanityBar.style.width = sanity + '%';
-
-            if (isFlashlightOn && batteryLevel > 0) {
-                batteryLevel -= 1;
-                document.getElementById('battery-count').innerText = Math.max(0, batteryLevel);
-                if (batteryLevel <= 0) {
-                    isFlashlightOn = false;
-                    flashlight.intensity = 0;
-                    flashlightBtn.classList.remove('active');
-                }
-            }
         }, 1000);
 
         function showMsg(txt) {
             const m = document.getElementById('message');
             m.innerText = txt;
             m.style.opacity = '1';
-            setTimeout(() => { m.style.opacity = '0'; }, 2000);
+            setTimeout(() => { m.style.opacity = '0'; }, 1500);
         }
 
         let stepTimer = 0;
-        const normalSpeed = 0.08;
-        const sprintSpeed = 0.18;
+        const normalSpeed = 0.1;
+        const sprintSpeed = 0.22;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -497,13 +408,6 @@
             }
             staminaBar.style.width = stamina + '%';
 
-            const glitchOverlay = document.getElementById('glitch-overlay');
-            if (sanity < 30) {
-                glitchOverlay.style.opacity = Math.random() < 0.3 ? '0.7' : '0.2';
-            } else {
-                glitchOverlay.style.opacity = '0';
-            }
-
             if (moveVector.x !== 0 || moveVector.z !== 0) {
                 const moveDir = new THREE.Vector3(moveVector.x, 0, moveVector.z);
                 moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
@@ -518,4 +422,49 @@
                     camera.position.z = nextZ;
                 }
 
-                updateInfiniteBackrooms(camera.position.x, came
+                updateInfiniteBackrooms(camera.position.x, camera.position.z);
+
+                stepTimer += currentSpeed;
+                if (stepTimer > 1.2) {
+                    playFootstep();
+                    stepTimer = 0;
+                }
+            }
+
+            ceilingLights.forEach(item => {
+                if (Math.random() < 0.02) {
+                    const isOff = Math.random() < 0.4;
+                    item.mesh.material.opacity = isOff ? 0.2 : 1.0;
+                    item.mesh.material.transparent = true;
+                    item.light.intensity = isOff ? 0.1 : 0.7;
+                }
+            });
+
+            almondWaters.forEach(w => {
+                if (!w.collected) {
+                    w.mesh.rotation.y += 0.05;
+                    const dist = camera.position.distanceTo(w.mesh.position);
+                    if (dist < 3.5) {
+                        w.collected = true;
+                        scene.remove(w.mesh);
+                        waterCount++;
+                        survivalTime += 15;
+                        document.getElementById('water-count').innerText = waterCount;
+                        showMsg("Đã nhặt Nước Hạnh Nhân! (+15s)");
+                    }
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+
